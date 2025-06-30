@@ -29,6 +29,6 @@ Route::prefix('attendance')->name('attendance.')->group(function () {
 // API Routes for AJAX
 Route::prefix('api')->name('api.')->group(function () {
     Route::post('attendance/process', [AttendanceController::class, 'processAttendance'])->name('attendance.process');
-    Route::post('classifier/retrain', [AttendanceController::class, 'retrainModel'])->name('retrain');
+    Route::get('attendance/today/{class}', [AttendanceController::class, 'getTodayAttendance'])->name('attendance.today');
     Route::get('status', [DashboardController::class, 'apiStatus'])->name('status');
 });

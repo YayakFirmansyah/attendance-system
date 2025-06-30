@@ -15,13 +15,17 @@ class Attendance extends Model
         'class_id',
         'date',
         'check_in',
+        'check_out',
         'status',
+        'similarity_score',
         'notes'
     ];
 
     protected $casts = [
         'date' => 'date',
-        'check_in' => 'datetime:H:i',
+        'check_in' => 'datetime:H:i:s',
+        'check_out' => 'datetime:H:i:s',
+        'similarity_score' => 'decimal:3'
     ];
 
     public function student()
@@ -48,5 +52,15 @@ class Attendance extends Model
         }
         
         return $this->check_in > $this->classModel->start_time;
+    }
+
+    public function getFormattedCheckInAttribute()
+    {
+        return $this->check_in ? $this->check_in->format('H:i') : '-';
+    }
+
+    public function getSimilarityPercentageAttribute()
+    {
+        return $this->similarity_score ? round($this->similarity_score * 100, 1) . '%' : '-';
     }
 }

@@ -16,7 +16,10 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $today = today();
+        // Set timezone untuk memastikan waktu lokal
+        Carbon::setLocale('id');
+        $now = Carbon::now('Asia/Jakarta');
+        $today = $now->toDateString();
         
         // Statistics
         $totalStudents = Student::where('status', 'active')->count();
@@ -31,12 +34,28 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        // Today's classes
+        // PERBAIKAN: Today's classes dengan multiple format hari
+        $currentDay = strtolower($now->format('l')); // english day name
+        $currentDayId = strtolower($now->translatedFormat('l')); // indonesian day name
+        
+        Log::info("Current day check: {$currentDay} | Indonesian: {$currentDayId} | Time: {$now}");
+        
         $todayClasses = ClassModel::with('course')
             ->where('status', 'active')
-            ->where('day', strtolower(Carbon::now()->format('l')))
+            ->where(function($query) use ($currentDay, $currentDayId) {
+                $query->where('day', $currentDay)
+                      ->orWhere('day', $currentDayId)
+                      ->orWhere('day', strtolower($currentDay))
+                      ->orWhere('day', ucfirst($currentDay));
+            })
             ->orderBy('start_time')
             ->get();
+
+        // Debug info
+        Log::info("Found classes for today: " . $todayClasses->count());
+        foreach($todayClasses as $class) {
+            Log::info("Class: {$class->course->course_name} - Day: {$class->day} - Time: {$class->start_time}");
+        }
 
         // Attendance stats by class
         $classAttendanceStats = [];
@@ -59,7 +78,8 @@ class DashboardController extends Controller
             'todayLogs',
             'recentLogs',
             'todayClasses',
-            'classAttendanceStats'
+            'classAttendanceStats',
+            'now' // Pass current time to view
         ));
     }
 

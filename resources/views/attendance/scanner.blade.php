@@ -1,4 +1,4 @@
-{{-- resources/views/attendance/scanner.blade.php --}}
+{{-- resources/views/attendance/scanner.blade.php - FIXED VERSION --}}
 @extends('layouts.app')
 
 @section('title', 'Attendance Scanner - ' . $class->course->course_name)
@@ -21,6 +21,9 @@
         </a>
     </div>
 </div>
+
+<!-- Notification Toast Container -->
+<div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
 
 <div class="row">
     <!-- Camera Section -->
@@ -64,16 +67,25 @@
     
     <!-- Results Section -->
     <div class="col-md-4">
+        <!-- Today's Attendance -->
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
                     <i class="fas fa-users"></i>
                     Today's Attendance
                 </h5>
+                <button class="btn btn-sm btn-outline-primary" onclick="loadTodayAttendance()">
+                    <i class="fas fa-sync"></i>
+                </button>
             </div>
             <div class="card-body">
                 <div id="attendance-list">
-                    <!-- Attendance will be loaded here -->
+                    <div class="text-center">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="text-muted mt-2">Loading attendance...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -88,7 +100,10 @@
             </div>
             <div class="card-body">
                 <div id="recognition-results">
-                    <p class="text-muted">Start scanner to see recognition results...</p>
+                    <div class="text-center text-muted">
+                        <i class="fas fa-camera fa-2x mb-2 opacity-50"></i>
+                        <p>Start scanner to see recognition results...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -133,7 +148,9 @@ function startScanner() {
         
         $('#start-scanner').prop('disabled', true);
         $('#stop-scanner').prop('disabled', false);
-        $('#recognition-status').removeClass('bg-secondary').addClass('bg-success').text('Scanning...');
+        $('#recognition-status').removeClass('bg-secondary bg-danger').addClass('bg-success').text('Scanning...');
+        
+        showNotification('Scanner started successfully', 'success');
         
         // Start auto-capture if enabled
         if ($('#auto-capture').is(':checked')) {
@@ -149,7 +166,9 @@ function startScanner() {
         });
     })
     .catch(function(err) {
-        alert('Error accessing camera: ' + err.message);
+        console.error('Camera error:', err);
+        showNotification('Error accessing camera: ' + err.message, 'error');
+        $('#recognition-status').removeClass('bg-success bg-warning').addClass('bg-danger').text('Camera Error');
     });
 }
 
@@ -166,9 +185,10 @@ function stopScanner() {
     
     $('#start-scanner').prop('disabled', false);
     $('#stop-scanner').prop('disabled', true);
-    $('#recognition-status').removeClass('bg-success').addClass('bg-secondary').text('Stopped');
+    $('#recognition-status').removeClass('bg-success bg-warning bg-danger').addClass('bg-secondary').text('Stopped');
     
     $(document).off('keydown');
+    showNotification('Scanner stopped', 'info');
 }
 
 function captureAndProcess() {
@@ -188,7 +208,7 @@ function captureAndProcess() {
 }
 
 function processAttendance(imageData) {
-    $('#recognition-status').removeClass('bg-success').addClass('bg-warning').text('Processing...');
+    $('#recognition-status').removeClass('bg-success bg-danger').addClass('bg-warning').text('Processing...');
     
     $.ajax({
         url: '{{ route("api.attendance.process") }}',
@@ -196,36 +216,68 @@ function processAttendance(imageData) {
         data: {
             image: imageData,
             class_id: {{ $class->id }},
-            device_info: navigator.userAgent
+            device_info: navigator.userAgent,
+            _token: '{{ csrf_token() }}'
         },
+        timeout: 30000,
         success: function(response) {
-            $('#recognition-status').removeClass('bg-warning').addClass('bg-success').text('Scanning...');
+            console.log('API Response:', response);
             
             if (response.success) {
+                $('#recognition-status').removeClass('bg-warning bg-danger').addClass('bg-success').text('Scanning...');
+                
                 displayRecognitionResults(response);
                 
+                // Check for verified faces and attendance records
                 if (response.results && response.results.length > 0) {
-                    // Refresh attendance list
-                    loadTodayAttendance();
-                    
-                    // Show success notification
+                    let verifiedCount = 0;
                     response.results.forEach(result => {
-                        showAttendanceNotification(result);
+                        if (result.verified) {
+                            verifiedCount++;
+                            showAttendanceNotification(result);
+                        }
                     });
+                    
+                    if (verifiedCount > 0) {
+                        // Refresh attendance list after a short delay
+                        setTimeout(loadTodayAttendance, 1000);
+                    }
+                    
+                    if (verifiedCount === 0) {
+                        showNotification('Faces detected but not recognized', 'warning');
+                    }
+                } else {
+                    showNotification('No faces detected', 'info');
+                    displayNoFacesDetected();
                 }
             } else {
-                console.log('Recognition failed:', response.message);
+                $('#recognition-status').removeClass('bg-warning').addClass('bg-danger').text('Error');
+                showNotification('Recognition failed: ' + (response.message || 'Unknown error'), 'error');
+                displayRecognitionError(response.message);
             }
         },
-        error: function(xhr) {
+        error: function(xhr, status, error) {
             $('#recognition-status').removeClass('bg-warning').addClass('bg-danger').text('Error');
             console.error('Processing error:', xhr.responseText);
             
+            let errorMessage = 'Processing failed';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMessage = xhr.responseJSON.message;
+            } else if (status === 'timeout') {
+                errorMessage = 'Request timeout - Python API too slow';
+            } else if (xhr.status === 0) {
+                errorMessage = 'Connection failed - Check if Python API is running';
+            }
+            
+            showNotification(errorMessage, 'error');
+            displayRecognitionError(errorMessage);
+            
+            // Resume scanning after error
             setTimeout(() => {
                 if (isScanning) {
                     $('#recognition-status').removeClass('bg-danger').addClass('bg-success').text('Scanning...');
                 }
-            }, 2000);
+            }, 3000);
         }
     });
 }
@@ -233,92 +285,160 @@ function processAttendance(imageData) {
 function displayRecognitionResults(response) {
     const container = $('#recognition-results');
     
-    if (response.detected_faces && response.detected_faces.length > 0) {
+    if (response.results && response.results.length > 0) {
         let html = '<div class="mb-2"><small class="text-muted">' + new Date().toLocaleTimeString() + '</small></div>';
         
-        response.detected_faces.forEach(face => {
-            const confidence = (face.confidence_score * 100).toFixed(1);
-            const isRecognized = face.student_id !== null;
+        response.results.forEach((result, index) => {
+            const similarity = (result.similarity * 100).toFixed(1);
+            const isVerified = result.verified;
             
             html += `
-                <div class="border rounded p-2 mb-2 ${isRecognized ? 'border-success bg-light' : 'border-warning'}">
-                    <div class="d-flex justify-content-between">
-                        <span>${isRecognized ? 'Recognized' : 'Unknown'}</span>
-                        <span class="badge ${isRecognized ? 'bg-success' : 'bg-warning'}">${confidence}%</span>
+                <div class="border rounded p-2 mb-2 ${isVerified ? 'border-success bg-light' : 'border-warning'}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${isVerified ? result.student_name : 'Unknown Face'}</strong>
+                            ${isVerified ? '<br><small class="text-muted">ID: ' + result.student_id + '</small>' : ''}
+                        </div>
+                        <div class="text-end">
+                            <span class="badge ${isVerified ? 'bg-success' : 'bg-warning'}">${similarity}%</span>
+                            <br><small class="text-muted">MTCNN: ${(result.mtcnn_confidence * 100).toFixed(1)}%</small>
+                        </div>
                     </div>
-                    ${isRecognized ? `<small class="text-muted">Student ID: ${face.student_id}</small>` : ''}
                 </div>
             `;
         });
         
         container.html(html);
     } else {
-        container.html('<p class="text-muted">No faces detected in last scan.</p>');
+        displayNoFacesDetected();
     }
 }
 
+function displayNoFacesDetected() {
+    $('#recognition-results').html(`
+        <div class="text-center text-muted">
+            <i class="fas fa-user-slash fa-2x mb-2 opacity-50"></i>
+            <p>No faces detected in last scan.</p>
+            <small>Make sure your face is clearly visible and well-lit.</small>
+        </div>
+    `);
+}
+
+function displayRecognitionError(errorMessage) {
+    $('#recognition-results').html(`
+        <div class="text-center text-danger">
+            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+            <p><strong>Recognition Error</strong></p>
+            <small>${errorMessage}</small>
+        </div>
+    `);
+}
+
 function loadTodayAttendance() {
-    $.get('{{ route("attendance.class", $class) }}')
-        .done(function(data) {
-            // Extract attendance data from response
-            // This is a simplified version - you might need to adjust based on your actual response
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(data, 'text/html');
-            const attendanceRows = doc.querySelectorAll('tbody tr');
-            
-            let html = '';
-            let count = 0;
-            
-            attendanceRows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                if (cells.length >= 3) {
-                    const name = cells[1].textContent.trim();
-                    const time = cells[2].textContent.trim();
-                    
-                    if (name && time && time !== '-') {
-                        html += `
-                            <div class="d-flex justify-content-between align-items-center border-bottom pb-1 mb-1">
-                                <span>${name}</span>
-                                <small class="text-muted">${time}</small>
-                            </div>
-                        `;
-                        count++;
-                    }
-                }
-            });
-            
-            if (html) {
-                $('#attendance-list').html(`
-                    <div class="mb-2">
-                        <strong>Present Today: ${count}</strong>
-                    </div>
-                    ${html}
-                `);
+    // Show loading state
+    $('#attendance-list').html(`
+        <div class="text-center">
+            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted mt-2">Loading attendance...</p>
+        </div>
+    `);
+    
+    // Use dedicated API endpoint for attendance
+    $.ajax({
+        url: '{{ route("api.attendance.today", $class) }}',
+        method: 'GET',
+        timeout: 10000,
+        success: function(response) {
+            if (response.success && response.attendances) {
+                displayTodayAttendance(response.attendances);
             } else {
                 $('#attendance-list').html('<p class="text-muted">No attendance recorded yet.</p>');
             }
-        })
-        .fail(function() {
-            $('#attendance-list').html('<p class="text-danger">Error loading attendance.</p>');
+        },
+        error: function(xhr, status, error) {
+            console.error('Error loading attendance:', error);
+            $('#attendance-list').html(`
+                <div class="text-center text-danger">
+                    <i class="fas fa-exclamation-triangle mb-2"></i>
+                    <p>Error loading attendance</p>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadTodayAttendance()">
+                        <i class="fas fa-retry"></i> Retry
+                    </button>
+                </div>
+            `);
+        }
+    });
+}
+
+function displayTodayAttendance(attendances) {
+    let html = `<div class="mb-2"><strong>Present Today: ${attendances.length}</strong></div>`;
+    
+    if (attendances.length > 0) {
+        attendances.forEach(attendance => {
+            const time = new Date(attendance.check_in).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+            
+            html += `
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-1 mb-1">
+                    <div>
+                        <span>${attendance.student.name}</span>
+                        <br><small class="text-muted">${attendance.student.nim}</small>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-success">${time}</small>
+                        ${attendance.similarity_score ? '<br><small class="text-muted">' + (attendance.similarity_score * 100).toFixed(1) + '%</small>' : ''}
+                    </div>
+                </div>
+            `;
         });
+    } else {
+        html += '<p class="text-muted">No attendance recorded yet.</p>';
+    }
+    
+    $('#attendance-list').html(html);
 }
 
 function showAttendanceNotification(result) {
-    // Create toast notification
+    const similarity = (result.similarity * 100).toFixed(1);
+    showNotification(
+        `✅ <strong>${result.student_name}</strong> marked present<br><small>Confidence: ${similarity}%</small>`,
+        'success',
+        5000
+    );
+}
+
+function showNotification(message, type = 'info', duration = 4000) {
+    const types = {
+        'success': { bg: 'bg-success', icon: 'fas fa-check-circle' },
+        'error': { bg: 'bg-danger', icon: 'fas fa-exclamation-circle' },
+        'warning': { bg: 'bg-warning text-dark', icon: 'fas fa-exclamation-triangle' },
+        'info': { bg: 'bg-info', icon: 'fas fa-info-circle' }
+    };
+    
+    const config = types[type] || types['info'];
+    const toastId = 'toast-' + Date.now();
+    
     const toast = `
-        <div class="toast align-items-center text-white bg-success border-0" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+        <div id="${toastId}" class="toast align-items-center text-white ${config.bg} border-0 mb-2" role="alert">
             <div class="d-flex">
                 <div class="toast-body">
-                    <strong>${result.student_name}</strong> marked present<br>
-                    <small>Confidence: ${(result.confidence * 100).toFixed(1)}%</small>
+                    <i class="${config.icon} me-2"></i>
+                    ${message}
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
         </div>
     `;
     
-    $('body').append(toast);
-    $('.toast').last().toast({ delay: 4000 }).toast('show').on('hidden.bs.toast', function() {
+    $('#toast-container').append(toast);
+    
+    const $toast = $('#' + toastId);
+    $toast.toast({ delay: duration }).toast('show').on('hidden.bs.toast', function() {
         $(this).remove();
     });
 }
