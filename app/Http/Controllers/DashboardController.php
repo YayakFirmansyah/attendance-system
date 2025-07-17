@@ -1,5 +1,5 @@
 <?php
-// app/Http/Controllers/DashboardController.php
+// app/Http/Controllers/DashboardController.php - Role-Based Update
 
 namespace App\Http\Controllers;
 
@@ -7,6 +7,7 @@ use App\Models\Student;
 use App\Models\ClassModel;
 use App\Models\Attendance;
 use App\Models\AttendanceLog;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -16,48 +17,46 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        // Set timezone untuk memastikan waktu lokal
+        $user = auth()->user();
+        
+        // Role-based dashboard
+        if ($user->isAdmin()) {
+            return $this->adminDashboard();
+        } else {
+            return $this->dosenDashboard();
+        }
+    }
+
+    private function adminDashboard()
+    {
+        // Set timezone
         Carbon::setLocale('id');
         $now = Carbon::now('Asia/Jakarta');
         $today = $now->toDateString();
         
-        // Statistics
+        // Admin Statistics
         $totalStudents = Student::where('status', 'active')->count();
+        $totalUsers = User::where('status', 'active')->count();
         $totalClasses = ClassModel::where('status', 'active')->count();
         $todayAttendances = Attendance::whereDate('date', $today)->count();
-        $todayLogs = AttendanceLog::whereDate('timestamp', $today)->count();
+        $todayLogs = AttendanceLog::whereDate('timestamp', $today)->count() ?? 0;
 
         // Recent activity
         $recentLogs = AttendanceLog::with(['student', 'classModel.course'])
             ->whereDate('timestamp', $today)
             ->orderBy('timestamp', 'desc')
             ->limit(10)
-            ->get();
+            ->get() ?? collect();
 
-        // PERBAIKAN: Today's classes dengan multiple format hari
-        $currentDay = strtolower($now->format('l')); // english day name
-        $currentDayId = strtolower($now->translatedFormat('l')); // indonesian day name
-        
-        Log::info("Current day check: {$currentDay} | Indonesian: {$currentDayId} | Time: {$now}");
-        
+        // Today's classes
+        $currentDay = strtolower($now->format('l'));
         $todayClasses = ClassModel::with('course')
             ->where('status', 'active')
-            ->where(function($query) use ($currentDay, $currentDayId) {
-                $query->where('day', $currentDay)
-                      ->orWhere('day', $currentDayId)
-                      ->orWhere('day', strtolower($currentDay))
-                      ->orWhere('day', ucfirst($currentDay));
-            })
+            ->where('day', 'like', '%' . $currentDay . '%')
             ->orderBy('start_time')
             ->get();
 
-        // Debug info
-        Log::info("Found classes for today: " . $todayClasses->count());
-        foreach($todayClasses as $class) {
-            Log::info("Class: {$class->course->course_name} - Day: {$class->day} - Time: {$class->start_time}");
-        }
-
-        // Attendance stats by class
+        // Class attendance stats
         $classAttendanceStats = [];
         foreach ($todayClasses as $class) {
             $attendanceCount = Attendance::where('class_id', $class->id)
@@ -67,35 +66,66 @@ class DashboardController extends Controller
             $classAttendanceStats[] = [
                 'class' => $class,
                 'attendance_count' => $attendanceCount,
-                'percentage' => $class->capacity > 0 ? round(($attendanceCount / $class->capacity) * 100, 1) : 0
+                'capacity' => $class->capacity ?? 0,
+                'percentage' => isset($class->capacity) && $class->capacity > 0 ? 
+                    round(($attendanceCount / $class->capacity) * 100, 1) : 0
             ];
         }
 
-        return view('dashboard', compact(
+        return view('dashboard.admin', compact(
             'totalStudents',
+            'totalUsers',
             'totalClasses', 
             'todayAttendances',
             'todayLogs',
             'recentLogs',
             'todayClasses',
             'classAttendanceStats',
-            'now' // Pass current time to view
+            'now'
+        ));
+    }
+
+    private function dosenDashboard()
+    {
+        // Set timezone
+        Carbon::setLocale('id');
+        $now = Carbon::now('Asia/Jakarta');
+        $today = $now->toDateString();
+        
+        // Dosen Statistics (filtered by their classes)
+        // TODO: Add relationship between User and Classes for dosen
+        // For now, show general stats
+        $todayAttendances = Attendance::whereDate('date', $today)->count();
+        $todayLogs = AttendanceLog::whereDate('timestamp', $today)->count() ?? 0;
+
+        // Today's classes (all for now, filter by dosen later)
+        $currentDay = strtolower($now->format('l'));
+        $todayClasses = ClassModel::with('course')
+            ->where('status', 'active')
+            ->where('day', 'like', '%' . $currentDay . '%')
+            ->orderBy('start_time')
+            ->get();
+
+        // Recent activity from classes
+        $recentLogs = AttendanceLog::with(['student', 'classModel.course'])
+            ->whereDate('timestamp', $today)
+            ->orderBy('timestamp', 'desc')
+            ->limit(5)
+            ->get() ?? collect();
+
+        return view('dashboard.dosen', compact(
+            'todayAttendances',
+            'todayLogs',
+            'todayClasses',
+            'recentLogs',
+            'now'
         ));
     }
 
     public function apiStatus()
     {
         try {
-            $apiUrl = config('app.python_api_url');
-            
-            if (!$apiUrl) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Python API URL not configured'
-                ], 500);
-            }
-
-            Log::info('Checking API status at: ' . $apiUrl);
+            $apiUrl = config('app.python_api_url', 'http://localhost:5000');
             
             $response = Http::timeout(5)->get($apiUrl . '/api/health');
             
@@ -105,14 +135,12 @@ class DashboardController extends Controller
                     'data' => $response->json()
                 ]);
             } else {
-                Log::error('API responded with status: ' . $response->status());
                 return response()->json([
                     'status' => 'error',
                     'message' => 'API responded with status: ' . $response->status()
                 ], 500);
             }
         } catch (\Exception $e) {
-            Log::error('API connection failed: ' . $e->getMessage());
             return response()->json([
                 'status' => 'error',
                 'message' => 'Connection failed: ' . $e->getMessage()
