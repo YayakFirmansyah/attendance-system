@@ -50,6 +50,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('api')->name('api.')->group(function () {
         Route::post('attendance/process', [AttendanceController::class, 'processAttendance'])->name('attendance.process');
         Route::get('attendance/today/{class}', [AttendanceController::class, 'getTodayAttendance'])->name('attendance.today');
+        Route::get('attendance/logs/{class}', [AttendanceController::class, 'getAttendanceLogs'])->name('attendance.logs');
         Route::get('status', [DashboardController::class, 'apiStatus'])->name('status');
     });
 });

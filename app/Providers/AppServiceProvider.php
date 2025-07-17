@@ -1,24 +1,23 @@
 <?php
+// app/Providers/AppServiceProvider.php
 
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Services\FaceRecognitionService;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        //
+        // Register Face Recognition Service
+        $this->app->singleton(FaceRecognitionService::class, function ($app) {
+            return new FaceRecognitionService();
+        });
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        //
+        // Add any boot logic here
     }
 }

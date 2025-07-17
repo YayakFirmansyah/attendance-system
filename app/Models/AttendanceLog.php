@@ -16,18 +16,19 @@ class AttendanceLog extends Model
         'timestamp',
         'captured_image',
         'confidence_score',
-        'detected_faces',
+        'is_verified',
         'device_info',
-        'log_type',
-        'error_message'
+        'api_response',
     ];
 
     protected $casts = [
         'timestamp' => 'datetime',
-        'detected_faces' => 'array',
-        'confidence_score' => 'decimal:3'
+        'confidence_score' => 'decimal:3',
+        'is_verified' => 'boolean',
+        'api_response' => 'array',
     ];
 
+    // Relationships
     public function student()
     {
         return $this->belongsTo(Student::class);
@@ -38,31 +39,44 @@ class AttendanceLog extends Model
         return $this->belongsTo(ClassModel::class, 'class_id');
     }
 
+    // Accessors
+    public function getConfidencePercentageAttribute()
+    {
+        return round($this->confidence_score * 100, 1);
+    }
+
     public function getCapturedImageUrlAttribute()
     {
-        return $this->captured_image ? asset('storage/attendance_logs/' . $this->captured_image) : null;
-    }
-
-    public function getDeviceNameAttribute()
-    {
-        if (!$this->device_info) return 'Unknown';
-        
-        if (strpos($this->device_info, 'Chrome') !== false) return 'Chrome Browser';
-        if (strpos($this->device_info, 'Firefox') !== false) return 'Firefox Browser';
-        if (strpos($this->device_info, 'Safari') !== false) return 'Safari Browser';
-        if (strpos($this->device_info, 'Edge') !== false) return 'Edge Browser';
-        
-        return 'Unknown Browser';
-    }
-
-    public function getFaceCountAttribute()
-    {
-        if (!$this->detected_faces || !is_array($this->detected_faces)) return 0;
-        
-        if (isset($this->detected_faces['faces_count'])) {
-            return $this->detected_faces['faces_count'];
+        if (!$this->captured_image) {
+            return null;
         }
         
-        return count($this->detected_faces);
+        return asset('storage/' . config('app.face_images_path', 'attendance_captures') . '/' . $this->captured_image);
+    }
+
+    // Scopes
+    public function scopeVerified($query)
+    {
+        return $query->where('is_verified', true);
+    }
+
+    public function scopeUnverified($query)
+    {
+        return $query->where('is_verified', false);
+    }
+
+    public function scopeToday($query)
+    {
+        return $query->whereDate('timestamp', today());
+    }
+
+    public function scopeByClass($query, $classId)
+    {
+        return $query->where('class_id', $classId);
+    }
+
+    public function scopeByStudent($query, $studentId)
+    {
+        return $query->where('student_id', $studentId);
     }
 }
