@@ -129,6 +129,27 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('courses.*') ? 'active' : '' }}" 
+                           href="{{ route('courses.index') }}">
+                            <i class="fas fa-book me-2"></i>
+                            Kelola Courses
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('rooms.*') ? 'active' : '' }}" 
+                           href="{{ route('rooms.index') }}">
+                            <i class="fas fa-door-open me-2"></i>
+                            Kelola Ruangan
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('classes.*') ? 'active' : '' }}" 
+                           href="{{ route('classes.index') }}">
+                            <i class="fas fa-calendar me-2"></i>
+                            Kelola Jadwal
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('students.*') ? 'active' : '' }}" 
                            href="{{ route('students.index') }}">
                             <i class="fas fa-users me-2"></i>

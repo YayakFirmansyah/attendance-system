@@ -15,17 +15,25 @@ class Course extends Model
         'course_name',
         'credits',
         'faculty',
-        'lecturer_name',
+        'lecturer_id',
         'description',
         'status'
     ];
 
-    protected $casts = [
-        'credits' => 'integer',
-    ];
+    // Relationships
+    public function lecturer()
+    {
+        return $this->belongsTo(User::class, 'lecturer_id');
+    }
 
     public function classes()
     {
-        return $this->hasMany(ClassModel::class, 'course_id');
+        return $this->hasMany(ClassModel::class);
+    }
+
+    // Accessors
+    public function getLecturerNameAttribute()
+    {
+        return $this->lecturer ? $this->lecturer->name : 'No Lecturer Assigned';
     }
 }

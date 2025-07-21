@@ -1,5 +1,5 @@
 <?php
-// app/Models/ClassModel.php
+// app/Models/ClassModel.php - Updated
 
 namespace App\Models;
 
@@ -14,25 +14,23 @@ class ClassModel extends Model
 
     protected $fillable = [
         'course_id',
+        'room_id',
         'class_code',
-        'semester',
         'day',
         'start_time',
         'end_time',
-        'room',
-        'capacity',
         'status'
     ];
 
-    protected $casts = [
-        'start_time' => 'datetime:H:i',
-        'end_time' => 'datetime:H:i',
-        'capacity' => 'integer',
-    ];
-
+    // Relationships
     public function course()
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function room()
+    {
+        return $this->belongsTo(Room::class);
     }
 
     public function attendances()
@@ -45,13 +43,28 @@ class ClassModel extends Model
         return $this->hasMany(AttendanceLog::class, 'class_id');
     }
 
-    public function getTodayAttendances()
+    // Scopes
+    public function scopeActive($query)
     {
-        return $this->attendances()->whereDate('date', today())->get();
+        return $query->where('status', 'active');
     }
 
-    public function getFullNameAttribute()
+    public function scopeToday($query)
     {
-        return $this->course->course_name . ' - ' . $this->class_code;
+        $today = strtolower(now()->format('l'));
+        return $query->where('day', $today);
+    }
+
+    // Accessors
+    public function getCapacityAttribute()
+    {
+        return $this->room ? $this->room->capacity : 0;
+    }
+
+    public function getFullClassNameAttribute()
+    {
+        $courseName = $this->course->course_name ?? 'Unknown Course';
+        $classCode = $this->class_code ? ' - ' . $this->class_code : '';
+        return $courseName . $classCode;
     }
 }

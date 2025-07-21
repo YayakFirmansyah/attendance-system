@@ -1,12 +1,15 @@
 <?php
-// routes/web.php - UPDATE dengan UserController
+// routes/web.php - COMPLETE ROUTES
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\UserController; // ← TAMBAH INI
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\CourseController;
+use App\Http\Controllers\RoomController;
+use App\Http\Controllers\ClassController;
 
 // AUTH ROUTES
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -21,13 +24,22 @@ Route::middleware(['auth'])->group(function () {
     
     // ADMIN ONLY ROUTES
     Route::middleware(['role:admin'])->group(function () {
+        // User management
+        Route::resource('users', UserController::class);
+        
+        // Room management
+        Route::resource('rooms', RoomController::class);
+        
+        // Course management
+        Route::resource('courses', CourseController::class);
+        
+        // Class schedule management
+        Route::resource('classes', ClassController::class);
+        
         // Students management
         Route::resource('students', StudentController::class);
         Route::get('students/{student}/faces', [StudentController::class, 'manageFaces'])->name('students.faces');
         Route::post('students/{student}/faces', [StudentController::class, 'uploadFaces'])->name('students.upload-faces');
-        
-        // User management (admin & dosen)
-        Route::resource('users', UserController::class); // ← TAMBAH INI
     });
     
     // ADMIN & DOSEN ROUTES  
@@ -39,10 +51,6 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/scanner/{class}', [AttendanceController::class, 'scanner'])->name('scanner');
             Route::get('/reports', [AttendanceController::class, 'reports'])->name('reports');
             Route::post('/generate-report', [AttendanceController::class, 'generateReport'])->name('generate-report');
-            Route::post('/attendance/add-student', [AttendanceController::class, 'addStudent']);
-            Route::get('/attendance/verification-stats', [AttendanceController::class, 'getVerificationStats']);
-            Route::post('/attendance/migrate-verification', [AttendanceController::class, 'migrateToVerification']);
-            Route::post('/attendance/test-verification', [AttendanceController::class, 'testVerification']);
         });
     });
     
