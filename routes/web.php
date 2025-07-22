@@ -1,10 +1,11 @@
 <?php
-// routes/web.php - COMPLETE ROUTES
+// routes/web.php - COMPLETE ROUTES WITH ATTENDANCE HISTORY
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AttendanceHistoryController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CourseController;
@@ -52,6 +53,18 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/reports', [AttendanceController::class, 'reports'])->name('reports');
             Route::post('/generate-report', [AttendanceController::class, 'generateReport'])->name('generate-report');
         });
+
+        // Attendance History routes
+        Route::prefix('attendance/history')->name('attendance.history.')->group(function () {
+            Route::get('/', [AttendanceHistoryController::class, 'index'])->name('index');
+            Route::get('/create', [AttendanceHistoryController::class, 'create'])->name('create');
+            Route::post('/', [AttendanceHistoryController::class, 'store'])->name('store');
+            Route::get('/{attendance}', [AttendanceHistoryController::class, 'show'])->name('show');
+            Route::get('/{attendance}/edit', [AttendanceHistoryController::class, 'edit'])->name('edit');
+            Route::put('/{attendance}', [AttendanceHistoryController::class, 'update'])->name('update');
+            Route::post('/bulk-edit', [AttendanceHistoryController::class, 'bulkEdit'])->name('bulk-edit');
+            Route::get('/reports/generate', [AttendanceHistoryController::class, 'reports'])->name('reports');
+        });
     });
 
     // API Routes for AJAX
@@ -72,9 +85,5 @@ Route::middleware(['auth'])->group(function () {
         // Student face status API
         Route::post('students/{student}/refresh-face-status', [StudentController::class, 'refreshFaceStatus'])->name('students.refresh-face-status');
         Route::get('flask-status', [StudentController::class, 'getApiStatus'])->name('flask-status');
-
-        // Add this route for bulk face status check
-        Route::get('students/face-status/bulk', [StudentController::class, 'getStudentsWithFaceStatus']);
     });
-
 });

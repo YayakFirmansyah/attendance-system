@@ -1,5 +1,5 @@
 <?php
-// app/Http/Controllers/DashboardController.php - Role-Based Update
+// app/Http/Controllers/DashboardController.php - FIXED
 
 namespace App\Http\Controllers;
 
@@ -19,7 +19,6 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
         
-        // Role-based dashboard
         if ($user->isAdmin()) {
             return $this->adminDashboard();
         } else {
@@ -29,7 +28,6 @@ class DashboardController extends Controller
 
     private function adminDashboard()
     {
-        // Set timezone
         Carbon::setLocale('id');
         $now = Carbon::now('Asia/Jakarta');
         $today = $now->toDateString();
@@ -48,11 +46,11 @@ class DashboardController extends Controller
             ->limit(10)
             ->get() ?? collect();
 
-        // Today's classes
+        // FIXED: Today's classes dengan proper eager loading
         $currentDay = strtolower($now->format('l'));
         $todayClasses = ClassModel::with(['course', 'room'])
             ->where('status', 'active')
-            ->where('day', 'like', '%' . $currentDay . '%')
+            ->where('day', $currentDay)
             ->orderBy('start_time')
             ->get();
 
@@ -87,22 +85,18 @@ class DashboardController extends Controller
 
     private function dosenDashboard()
     {
-        // Set timezone
         Carbon::setLocale('id');
         $now = Carbon::now('Asia/Jakarta');
         $today = $now->toDateString();
         
-        // Dosen Statistics (filtered by their classes)
-        // TODO: Add relationship between User and Classes for dosen
-        // For now, show general stats
         $todayAttendances = Attendance::whereDate('date', $today)->count();
         $todayLogs = AttendanceLog::whereDate('timestamp', $today)->count() ?? 0;
 
-        // Today's classes (all for now, filter by dosen later)
+        // FIXED: Today's classes dengan proper eager loading
         $currentDay = strtolower($now->format('l'));
         $todayClasses = ClassModel::with(['course', 'room'])
             ->where('status', 'active')
-            ->where('day', 'like', '%' . $currentDay . '%')
+            ->where('day', $currentDay)
             ->orderBy('start_time')
             ->get();
 
