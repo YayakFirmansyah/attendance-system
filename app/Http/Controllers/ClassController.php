@@ -8,17 +8,16 @@ use App\Models\Course;
 use Illuminate\Http\Request;
 use App\Models\Room;
 
-
 class ClassController extends Controller
 {
-    // public function __construct()
-    // {
-    //     $this->middleware('role:admin');
-    // }
-
     public function index()
     {
-        $classes = ClassModel::with('course')->orderBy('day')->orderBy('start_time')->paginate(15);
+        $classes = ClassModel::with(['course.lecturer', 'room'])
+            ->orderBy('semester', 'desc')
+            ->orderBy('day')
+            ->orderBy('start_time')
+            ->paginate(10);
+        
         return view('classes.index', compact('classes'));
     }
 
@@ -28,7 +27,9 @@ class ClassController extends Controller
             ->with('lecturer')
             ->whereNotNull('lecturer_id')
             ->get();
+        
         $rooms = Room::where('status', 'active')->get();
+        
         return view('classes.create', compact('courses', 'rooms'));
     }
 
@@ -36,28 +37,29 @@ class ClassController extends Controller
     {
         $validated = $request->validate([
             'course_id' => 'required|exists:courses,id',
-            'room_id' => 'required|exists:rooms,id',
             'class_code' => 'required|string|max:10',
+            'semester' => 'required|string|max:20',
             'day' => 'required|in:monday,tuesday,wednesday,thursday,friday,saturday,sunday',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
-            'status' => 'required|in:active,inactive'
+            'room_id' => 'required|exists:rooms,id',
+            'status' => 'required|in:active,inactive',
         ]);
 
-        // Check for duplicate class (same course, class_code, day, time)
-        $duplicateClass = ClassModel::where('course_id', $validated['course_id'])
+        // Check for duplicate class on same course, code, and semester
+        $duplicate = ClassModel::where('course_id', $validated['course_id'])
             ->where('class_code', $validated['class_code'])
-            ->where('day', $validated['day'])
-            ->where('status', 'active')
+            ->where('semester', $validated['semester'])
             ->exists();
 
-        if ($duplicateClass) {
-            return back()->withErrors(['error' => 'Class with same course, class code, and day already exists']);
+        if ($duplicate) {
+            return back()->withErrors(['error' => 'Class with this course, code, and semester already exists']);
         }
 
-        // Check for room schedule conflicts
+        // Check for room schedule conflicts on same day and time
         $conflict = ClassModel::where('room_id', $validated['room_id'])
             ->where('day', $validated['day'])
+            ->where('semester', $validated['semester']) // TAMBAHAN CHECK SEMESTER
             ->where('status', 'active')
             ->where(function($query) use ($validated) {
                 $query->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
@@ -70,11 +72,17 @@ class ClassController extends Controller
             ->exists();
 
         if ($conflict) {
-            return back()->withErrors(['error' => 'Room schedule conflict detected for this time']);
+            return back()->withErrors(['error' => 'Room schedule conflict detected for this time and semester']);
         }
 
         ClassModel::create($validated);
         return redirect()->route('classes.index')->with('success', 'Class schedule created successfully');
+    }
+
+    public function show(ClassModel $class)
+    {
+        $class->load(['course.lecturer']);
+        return view('classes.show', compact('class'));
     }
 
     public function edit(ClassModel $class)
@@ -83,7 +91,9 @@ class ClassController extends Controller
             ->with('lecturer')
             ->whereNotNull('lecturer_id')
             ->get();
-        $rooms = Room::where('status', 'active')->get();
+        
+        $rooms = \App\Models\Room::where('status', 'active')->get();
+        
         return view('classes.edit', compact('class', 'courses', 'rooms'));
     }
 
@@ -91,29 +101,30 @@ class ClassController extends Controller
     {
         $validated = $request->validate([
             'course_id' => 'required|exists:courses,id',
-            'room_id' => 'required|exists:rooms,id',
             'class_code' => 'required|string|max:10',
+            'semester' => 'required|string|max:20', // TAMBAHAN VALIDATION SEMESTER
             'day' => 'required|in:monday,tuesday,wednesday,thursday,friday,saturday,sunday',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
+            'room_id' => 'required|exists:rooms,id', // PERBAIKAN: room_id bukan room
             'status' => 'required|in:active,inactive'
         ]);
 
         // Check for duplicate class (exclude current class)
-        $duplicateClass = ClassModel::where('course_id', $validated['course_id'])
+        $duplicate = ClassModel::where('course_id', $validated['course_id'])
             ->where('class_code', $validated['class_code'])
-            ->where('day', $validated['day'])
-            ->where('status', 'active')
+            ->where('semester', $validated['semester'])
             ->where('id', '!=', $class->id)
             ->exists();
 
-        if ($duplicateClass) {
-            return back()->withErrors(['error' => 'Class with same course, class code, and day already exists']);
+        if ($duplicate) {
+            return back()->withErrors(['error' => 'Class with this course, code, and semester already exists']);
         }
 
-        // Check room conflicts (exclude current class)
+        // Check for room schedule conflicts (exclude current class)
         $conflict = ClassModel::where('room_id', $validated['room_id'])
             ->where('day', $validated['day'])
+            ->where('semester', $validated['semester']) // TAMBAHAN CHECK SEMESTER
             ->where('status', 'active')
             ->where('id', '!=', $class->id)
             ->where(function($query) use ($validated) {
@@ -127,7 +138,7 @@ class ClassController extends Controller
             ->exists();
 
         if ($conflict) {
-            return back()->withErrors(['error' => 'Room schedule conflict detected for this time']);
+            return back()->withErrors(['error' => 'Room schedule conflict detected for this time and semester']);
         }
 
         $class->update($validated);
@@ -136,6 +147,11 @@ class ClassController extends Controller
 
     public function destroy(ClassModel $class)
     {
+        // Check if class has attendance records
+        if ($class->attendances()->exists()) {
+            return back()->withErrors(['error' => 'Cannot delete class with existing attendance records']);
+        }
+
         $class->delete();
         return redirect()->route('classes.index')->with('success', 'Class schedule deleted successfully');
     }

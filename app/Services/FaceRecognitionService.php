@@ -18,7 +18,7 @@ class FaceRecognitionService
     public function __construct()
     {
         $this->apiUrl = config('app.python_api_url', 'http://localhost:5000');
-        $this->similarityThreshold = config('app.face_similarity_threshold', 0.2); // Default 50%
+        $this->similarityThreshold = config('app.face_similarity_threshold', 0.5); // Default 50%
     }
 
     public function checkApiHealth()

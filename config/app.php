@@ -53,7 +53,9 @@ return [
     */
 
     'url' => env('APP_URL', 'http://localhost'),
+
     'python_api_url' => env('PYTHON_API_URL', 'http://localhost:5000'),
+    'face_similarity_threshold' => env('FACE_SIMILARITY_THRESHOLD', 0.7),
 
     /*
     |--------------------------------------------------------------------------

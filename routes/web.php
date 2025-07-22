@@ -18,31 +18,31 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // PROTECTED ROUTES - butuh login
 Route::middleware(['auth'])->group(function () {
-    
-    // DASHBOARD - bisa diakses admin & dosen
+
+    // DASHBOARD - accessible by admin & dosen
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-    
+
     // ADMIN ONLY ROUTES
     Route::middleware(['role:admin'])->group(function () {
         // User management
         Route::resource('users', UserController::class);
-        
+
         // Room management
         Route::resource('rooms', RoomController::class);
-        
+
         // Course management
         Route::resource('courses', CourseController::class);
-        
+
         // Class schedule management
         Route::resource('classes', ClassController::class);
-        
+
         // Students management
         Route::resource('students', StudentController::class);
         Route::get('students/{student}/faces', [StudentController::class, 'manageFaces'])->name('students.faces');
         Route::post('students/{student}/faces', [StudentController::class, 'uploadFaces'])->name('students.upload-faces');
     });
-    
-    // ADMIN & DOSEN ROUTES  
+
+    // ADMIN & DOSEN ROUTES
     Route::middleware(['role:admin,dosen'])->group(function () {
         // Attendance routes
         Route::prefix('attendance')->name('attendance.')->group(function () {
@@ -53,12 +53,21 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/generate-report', [AttendanceController::class, 'generateReport'])->name('generate-report');
         });
     });
-    
+
     // API Routes for AJAX
     Route::prefix('api')->name('api.')->group(function () {
+        // Face Registration API - menggunakan StudentController
+        Route::get('model-info', [StudentController::class, 'getModelInfo'])->name('model-info');
+        Route::get('students/{student}/face-status', [StudentController::class, 'getFaceStatus'])->name('students.face-status');
+        Route::post('refresh-model-cache', [StudentController::class, 'refreshModelCache'])->name('refresh-model-cache');
+
+        // Attendance API routes
         Route::post('attendance/process', [AttendanceController::class, 'processAttendance'])->name('attendance.process');
         Route::get('attendance/today/{class}', [AttendanceController::class, 'getTodayAttendance'])->name('attendance.today');
         Route::get('attendance/logs/{class}', [AttendanceController::class, 'getAttendanceLogs'])->name('attendance.logs');
+
+        // Dashboard status API
         Route::get('status', [DashboardController::class, 'apiStatus'])->name('status');
     });
+
 });

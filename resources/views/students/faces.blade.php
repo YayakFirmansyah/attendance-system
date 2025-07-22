@@ -1,306 +1,225 @@
 {{-- resources/views/students/faces.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Manage Face Recognition - ' . $student->name)
+@section('title', 'Face Registration Status')
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1>Face Recognition Setup</h1>
-        <p class="text-muted">{{ $student->name }} ({{ $student->student_id }})</p>
+        <h1>Face Registration Status</h1>
+        <p class="text-muted mb-0">Check face recognition status for {{ $student->name }}</p>
     </div>
-    <a href="{{ route('students.index') }}" class="btn btn-secondary">
-        <i class="fas fa-arrow-left"></i> Back to Students
+    <a href="{{ route('students.show', $student) }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Student
     </a>
 </div>
 
 <div class="row">
-    <!-- Face Capture -->
-    <div class="col-md-8">
+    {{-- Student Info --}}
+    <div class="col-md-4">
         <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-camera"></i>
-                    Capture Student Faces
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="text-center mb-3">
-                    <video id="webcam" width="640" height="480" autoplay style="border: 2px solid #dee2e6; border-radius: 8px;"></video>
-                    <canvas id="canvas" width="640" height="480" style="display: none;"></canvas>
-                </div>
+            <div class="card-body text-center">
+                @if($student->profile_photo)
+                    <img src="{{ $student->profile_photo_url }}" 
+                         class="rounded-circle mb-3" 
+                         width="120" height="120" 
+                         style="object-fit: cover;"
+                         alt="{{ $student->name }}">
+                @else
+                    <div class="bg-light border rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
+                         style="width: 120px; height: 120px;">
+                        <i class="fas fa-user fa-3x text-muted"></i>
+                    </div>
+                @endif
                 
-                <div class="text-center mb-3">
-                    <button id="start-camera" class="btn btn-primary me-2">
-                        <i class="fas fa-video"></i> Start Camera
-                    </button>
-                    <button id="capture-face" class="btn btn-success me-2" disabled>
-                        <i class="fas fa-camera"></i> Capture Face
-                    </button>
-                    <button id="upload-faces" class="btn btn-info" disabled>
-                        <i class="fas fa-upload"></i> Upload Faces (<span id="face-count">0</span>)
-                    </button>
-                </div>
-                
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i>
-                    <strong>Instructions:</strong>
-                    <ul class="mb-0 mt-2">
-                        <li>Look directly at the camera</li>
-                        <li>Ensure good lighting</li>
-                        <li>Capture 3-5 different angles</li>
-                        <li>Keep your face clearly visible</li>
-                    </ul>
-                </div>
+                <h5>{{ $student->name }}</h5>
+                <p class="text-muted">{{ $student->student_id }}</p>
+                <span class="badge bg-info">{{ $student->program_study }}</span>
             </div>
         </div>
     </div>
-    
-    <!-- Captured Faces Preview -->
-    <div class="col-md-4">
+
+    {{-- Face Registration Status --}}
+    <div class="col-md-8">
         <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-images"></i>
-                    Captured Faces
-                </h5>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="card-title mb-0">Face Recognition Status</h6>
+                <button onclick="refreshStatus()" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-sync"></i> Refresh Status
+                </button>
             </div>
             <div class="card-body">
-                <div id="captured-faces" class="row g-2">
-                    <!-- Captured faces will appear here -->
-                </div>
-                
-                <div class="mt-3 text-center" style="display: none;" id="upload-progress">
-                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-                    <span>Uploading faces...</span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Existing Face Encodings -->
-        <div class="card mt-3">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-database"></i>
-                    Existing Face Data
-                </h5>
-            </div>
-            <div class="card-body">
-                @if($student->faceEncodings->count() > 0)
-                    @foreach($student->faceEncodings as $encoding)
-                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
-                            <div>
-                                <img src="{{ $encoding->image_url }}" width="50" height="50" class="rounded">
-                                <span class="ms-2">
-                                    {{ $encoding->is_primary ? 'Primary' : 'Secondary' }}
-                                </span>
-                            </div>
-                            <small class="text-muted">
-                                {{ $encoding->created_at->format('M d, Y') }}
-                            </small>
+                <div id="registrationStatus">
+                    @if($student->is_face_registered)
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle fa-2x text-success float-start me-3"></i>
+                            <h5 class="alert-heading">Face Registered!</h5>
+                            <p class="mb-0">This student's face is registered in the recognition model. They can be automatically recognized during attendance.</p>
                         </div>
-                    @endforeach
-                    
-                    <div class="mt-3">
-                        <button id="retrain-model" class="btn btn-warning btn-sm w-100">
-                            <i class="fas fa-sync"></i> Retrain Recognition Model
-                        </button>
+                    @else
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle fa-2x text-warning float-start me-3"></i>
+                            <h5 class="alert-heading">Face Not Registered</h5>
+                            <p class="mb-0">This student's face is not yet registered in the recognition model. Please contact administrator to add this student to the training data.</p>
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Model Information --}}
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Model Information</h6>
                     </div>
-                @else
-                    <p class="text-muted">No face encodings yet. Capture some faces above.</p>
+                    <div class="card-body">
+                        <div id="modelInfo" class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading model information...</p>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Instructions --}}
+                @if(!$student->is_face_registered)
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">How to Register Face</h6>
+                        </div>
+                        <div class="card-body">
+                            <ol>
+                                <li><strong>Contact Administrator:</strong> Request to be added to the face recognition training data</li>
+                                <li><strong>Provide Photos:</strong> Submit 5-10 clear face photos from different angles</li>
+                                <li><strong>Wait for Training:</strong> Administrator will retrain the model with your data</li>
+                                <li><strong>Verification:</strong> Your face registration status will be updated automatically</li>
+                            </ol>
+                            
+                            <div class="alert alert-info mt-3">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>Note:</strong> Face registration is managed through the main training pipeline using main.ipynb. This process requires manual intervention from the system administrator.
+                            </div>
+                        </div>
+                    </div>
                 @endif
             </div>
         </div>
     </div>
 </div>
+
 @endsection
 
 @push('scripts')
 <script>
-let webcam, canvas, ctx;
-let capturedFaces = [];
-let isStreaming = false;
-
-$(document).ready(function() {
-    webcam = document.getElementById('webcam');
-    canvas = document.getElementById('canvas');
-    ctx = canvas.getContext('2d');
-    
-    // Start camera button
-    $('#start-camera').click(function() {
-        startCamera();
-    });
-    
-    // Capture face button
-    $('#capture-face').click(function() {
-        captureFace();
-    });
-    
-    // Upload faces button
-    $('#upload-faces').click(function() {
-        uploadFaces();
-    });
-    
-    // Retrain model button
-    $('#retrain-model').click(function() {
-        retrainModel();
-    });
+// Load model information on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadModelInfo();
 });
 
-function startCamera() {
-    navigator.mediaDevices.getUserMedia({ 
-        video: { 
-            width: 640, 
-            height: 480,
-            facingMode: 'user'
-        } 
+function refreshStatus() {
+    // Refresh registration status
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+    btn.disabled = true;
+    
+    fetch('/api/students/{{ $student->id }}/face-status', {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
     })
-    .then(function(stream) {
-        webcam.srcObject = stream;
-        isStreaming = true;
-        
-        $('#start-camera').prop('disabled', true).text('Camera Active');
-        $('#capture-face').prop('disabled', false);
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateRegistrationStatus(data.is_registered);
+            loadModelInfo(); // Refresh model info too
+        } else {
+            alert('Failed to refresh status: ' + data.message);
+        }
     })
-    .catch(function(err) {
-        alert('Error accessing camera: ' + err.message);
+    .catch(error => {
+        alert('Error refreshing status: ' + error.message);
+    })
+    .finally(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
     });
 }
 
-function captureFace() {
-    if (!isStreaming) return;
+function updateRegistrationStatus(isRegistered) {
+    const container = document.getElementById('registrationStatus');
     
-    // Draw current frame to canvas
-    ctx.drawImage(webcam, 0, 0, 640, 480);
-    
-    // Get image data as base64
-    const imageData = canvas.toDataURL('image/jpeg', 0.8);
-    
-    // Add to captured faces
-    capturedFaces.push(imageData);
-    
-    // Update UI
-    updateCapturedFacesPreview();
-    updateFaceCount();
-    
-    // Enable upload button if we have faces
-    if (capturedFaces.length > 0) {
-        $('#upload-faces').prop('disabled', false);
-    }
-}
-
-function updateCapturedFacesPreview() {
-    const container = $('#captured-faces');
-    container.empty();
-    
-    capturedFaces.forEach((face, index) => {
-        const preview = `
-            <div class="col-6">
-                <div class="position-relative">
-                    <img src="${face}" class="img-fluid rounded" style="max-height: 80px;">
-                    <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0" 
-                            onclick="removeFace(${index})" style="padding: 2px 6px;">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
+    if (isRegistered) {
+        container.innerHTML = `
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle fa-2x text-success float-start me-3"></i>
+                <h5 class="alert-heading">Face Registered!</h5>
+                <p class="mb-0">This student's face is registered in the recognition model. They can be automatically recognized during attendance.</p>
             </div>
         `;
-        container.append(preview);
-    });
-}
-
-function removeFace(index) {
-    capturedFaces.splice(index, 1);
-    updateCapturedFacesPreview();
-    updateFaceCount();
-    
-    if (capturedFaces.length === 0) {
-        $('#upload-faces').prop('disabled', true);
+    } else {
+        container.innerHTML = `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle fa-2x text-warning float-start me-3"></i>
+                <h5 class="alert-heading">Face Not Registered</h5>
+                <p class="mb-0">This student's face is not yet registered in the recognition model. Please contact administrator to add this student to the training data.</p>
+            </div>
+        `;
     }
 }
 
-function updateFaceCount() {
-    $('#face-count').text(capturedFaces.length);
-}
-
-function uploadFaces() {
-    if (capturedFaces.length === 0) {
-        alert('Please capture some faces first.');
-        return;
-    }
-    
-    $('#upload-progress').show();
-    $('#upload-faces').prop('disabled', true);
-    
-    $.ajax({
-        url: '{{ route("students.upload-faces", $student) }}',
-        method: 'POST',
-        data: {
-            faces: capturedFaces
-        },
-        success: function(response) {
-            $('#upload-progress').hide();
-            
-            if (response.success) {
-                alert('Faces uploaded successfully!\n' + response.message);
-                
-                // Clear captured faces
-                capturedFaces = [];
-                updateCapturedFacesPreview();
-                updateFaceCount();
-                $('#upload-faces').prop('disabled', true);
-                
-                // Reload page to show updated face encodings
-                setTimeout(() => {
-                    location.reload();
-                }, 1000);
-            } else {
-                alert('Error uploading faces: ' + response.message);
-                $('#upload-faces').prop('disabled', false);
-            }
-        },
-        error: function(xhr) {
-            $('#upload-progress').hide();
-            $('#upload-faces').prop('disabled', false);
-            
-            let message = 'Error uploading faces.';
-            try {
-                const response = JSON.parse(xhr.responseText);
-                message = response.message || message;
-            } catch (e) {}
-            
-            alert(message);
+function loadModelInfo() {
+    fetch('/api/model-info')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayModelInfo(data.model_info);
+        } else {
+            displayModelError(data.message);
         }
+    })
+    .catch(error => {
+        displayModelError('Failed to load model information');
     });
 }
 
-function retrainModel() {
-    if (!confirm('Retrain the face recognition model? This may take a few minutes.')) {
-        return;
-    }
-    
-    const button = $('#retrain-model');
-    const originalText = button.html();
-    
-    button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Retraining...');
-    
-    $.ajax({
-        url: '{{ route("api.retrain") }}',
-        method: 'POST',
-        success: function(response) {
-            button.prop('disabled', false).html(originalText);
-            
-            if (response.success) {
-                alert('Model retrained successfully!\n' + response.message);
-            } else {
-                alert('Error retraining model: ' + response.message);
-            }
-        },
-        error: function(xhr) {
-            button.prop('disabled', false).html(originalText);
-            alert('Error retraining model. Please try again.');
-        }
-    });
+function displayModelInfo(modelInfo) {
+    const container = document.getElementById('modelInfo');
+    container.innerHTML = `
+        <div class="row text-start">
+            <div class="col-md-6">
+                <p><strong>Total Registered Students:</strong> ${modelInfo.classes.length}</p>
+                <p><strong>Model Status:</strong> <span class="badge bg-success">Active</span></p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Last Updated:</strong> ${modelInfo.last_updated || 'Unknown'}</p>
+                <p><strong>API Status:</strong> <span class="badge bg-success">Connected</span></p>
+            </div>
+        </div>
+        <details class="mt-3">
+            <summary class="btn btn-sm btn-outline-info">View All Registered Names</summary>
+            <div class="mt-2 p-3 bg-light rounded">
+                <div class="row">
+                    ${modelInfo.classes.map((name, index) => `
+                        <div class="col-md-3 mb-1">
+                            <small class="badge bg-secondary">${name}</small>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </details>
+    `;
+}
+
+function displayModelError(message) {
+    const container = document.getElementById('modelInfo');
+    container.innerHTML = `
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Error:</strong> ${message}
+        </div>
+    `;
 }
 </script>
 @endpush
