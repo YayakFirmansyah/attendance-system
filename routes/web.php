@@ -68,6 +68,13 @@ Route::middleware(['auth'])->group(function () {
 
         // Dashboard status API
         Route::get('status', [DashboardController::class, 'apiStatus'])->name('status');
+
+        // Student face status API
+        Route::post('students/{student}/refresh-face-status', [StudentController::class, 'refreshFaceStatus'])->name('students.refresh-face-status');
+        Route::get('flask-status', [StudentController::class, 'getApiStatus'])->name('flask-status');
+
+        // Add this route for bulk face status check
+        Route::get('students/face-status/bulk', [StudentController::class, 'getStudentsWithFaceStatus']);
     });
 
 });

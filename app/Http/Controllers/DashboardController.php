@@ -50,7 +50,7 @@ class DashboardController extends Controller
 
         // Today's classes
         $currentDay = strtolower($now->format('l'));
-        $todayClasses = ClassModel::with('course')
+        $todayClasses = ClassModel::with(['course', 'room'])
             ->where('status', 'active')
             ->where('day', 'like', '%' . $currentDay . '%')
             ->orderBy('start_time')
@@ -100,7 +100,7 @@ class DashboardController extends Controller
 
         // Today's classes (all for now, filter by dosen later)
         $currentDay = strtolower($now->format('l'));
-        $todayClasses = ClassModel::with('course')
+        $todayClasses = ClassModel::with(['course', 'room'])
             ->where('status', 'active')
             ->where('day', 'like', '%' . $currentDay . '%')
             ->orderBy('start_time')

@@ -98,8 +98,30 @@
                             <div>
                                 <strong>{{ $class->course->course_name }}</strong><br>
                                 <small class="text-muted">
-                                    {{ $class->room }} • 
-                                    {{ $class->start_time }} - {{ $class->end_time }}
+                                    @php
+                                        // Ambil nama ruangan dengan aman
+                                        $roomName = 'Unknown Room';
+                                        if (is_object($class->room) && isset($class->room->room_name)) {
+                                            $roomName = $class->room->room_name;
+                                        } elseif (is_string($class->room)) {
+                                            // Coba decode JSON, jika gagal tampilkan string biasa
+                                            $decoded = json_decode($class->room, true);
+                                            if (json_last_error() === JSON_ERROR_NONE && isset($decoded['room_name'])) {
+                                                $roomName = $decoded['room_name'];
+                                            } elseif (json_last_error() !== JSON_ERROR_NONE) {
+                                                $roomName = $class->room;
+                                            }
+                                        } elseif (is_array($class->room) && isset($class->room['room_name'])) {
+                                            $roomName = $class->room['room_name'];
+                                        }
+                                        // Jika $roomName masih berupa array atau json, tampilkan 'Unknown Room'
+                                        if (is_array($roomName) || (is_string($roomName) && str_starts_with($roomName, '{'))) {
+                                            $roomName = 'Unknown Room';
+                                        }
+                                    @endphp
+                                    {{ $roomName }} • 
+                                    {{ \Carbon\Carbon::parse($class->start_time)->format('H:i') }} - 
+                                    {{ \Carbon\Carbon::parse($class->end_time)->format('H:i') }}
                                 </small>
                             </div>
                             <div>

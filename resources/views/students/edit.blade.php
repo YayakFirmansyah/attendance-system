@@ -103,6 +103,7 @@
 
                     {{-- Academic Information --}}
                     <h6 class="border-bottom pb-2 mb-3">Academic Information</h6>
+                    
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -137,9 +138,43 @@
                             </div>
                         </div>
                     </div>
-                    {{-- Add more fields as needed --}}
 
-                    <div class="d-flex justify-content-end">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="semester" class="form-label">Current Semester <span class="text-danger">*</span></label>
+                                <select class="form-select @error('semester') is-invalid @enderror" 
+                                        id="semester" name="semester" required>
+                                    <option value="">Select Semester</option>
+                                    @for($i = 1; $i <= 8; $i++)
+                                        <option value="{{ $i }}" {{ old('semester', $student->semester) == $i ? 'selected' : '' }}>
+                                            Semester {{ $i }}
+                                        </option>
+                                    @endfor
+                                </select>
+                                @error('semester')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
+                                <select class="form-select @error('status') is-invalid @enderror" 
+                                        id="status" name="status" required>
+                                    <option value="active" {{ old('status', $student->status) == 'active' ? 'selected' : '' }}>Active</option>
+                                    <option value="inactive" {{ old('status', $student->status) == 'inactive' ? 'selected' : '' }}>Inactive</option>
+                                    <option value="graduated" {{ old('status', $student->status) == 'graduated' ? 'selected' : '' }}>Graduated</option>
+                                </select>
+                                @error('status')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{{ route('students.show', $student) }}" class="btn btn-secondary">Cancel</a>
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save"></i> Update Student
                         </button>
@@ -149,4 +184,45 @@
         </div>
     </div>
 </div>
+
 @endsection
+
+@push('scripts')
+<script>
+function previewImage(input) {
+    const preview = document.getElementById('imagePreview');
+    
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            preview.innerHTML = `
+                <img src="${e.target.result}" 
+                     class="rounded-circle" 
+                     style="width: 100%; height: 100%; object-fit: cover;" 
+                     alt="Preview">
+            `;
+        }
+        
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        // Reset to original image or default
+        @if($student->profile_photo)
+            preview.innerHTML = `
+                <img src="{{ $student->profile_photo_url }}" 
+                     class="rounded-circle" 
+                     style="width: 100%; height: 100%; object-fit: cover;" 
+                     alt="{{ $student->name }}">
+            `;
+        @else
+            preview.innerHTML = `
+                <div class="bg-light border rounded-circle d-flex align-items-center justify-content-center" 
+                     style="width: 100%; height: 100%;">
+                    <i class="fas fa-user fa-3x text-muted"></i>
+                </div>
+            `;
+        @endif
+    }
+}
+</script>
+@endpush

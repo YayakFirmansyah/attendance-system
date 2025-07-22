@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/StudentController.php - UPDATED WITH API-BASED FACE REGISTRATION
 
 namespace App\Http\Controllers;
 
@@ -20,15 +19,56 @@ class StudentController extends Controller
         $this->apiUrl = config('app.python_api_url', 'http://localhost:5000');
     }
 
-    public function index()
+    /**
+     * Optimized index method with better performance
+     */
+    public function index(Request $request)
     {
-        $students = Student::orderBy('name')->paginate(15);
+        $query = Student::select([
+            'id', 'student_id', 'name', 'email', 'program_study',
+            'faculty', 'semester', 'phone', 'status', 'profile_photo'
+        ]);
+
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('student_id', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->has('semester') && $request->semester) {
+            $query->where('semester', $request->semester);
+        }
+
+        if ($request->has('program') && $request->program) {
+            $query->where('program_study', 'like', "%{$request->program}%");
+        }
+
+        if ($request->has('status') && $request->status) {
+            $query->where('status', $request->status);
+        }
+
+        $students = $query->orderBy('name')
+            ->paginate(20)
+            ->withQueryString();
+
         return view('students.index', compact('students'));
     }
 
+    /**
+     * Optimized show method
+     */
     public function show(Student $student)
     {
-        $student->load(['faceEncodings', 'attendances.classModel.course']);
+        $student->load([
+            'attendances' => function ($query) {
+                $query->with('classModel.course')
+                    ->orderBy('date', 'desc')
+                    ->limit(10);
+            }
+        ]);
         return view('students.show', compact('student'));
     }
 
@@ -82,11 +122,9 @@ class StudentController extends Controller
         ]);
 
         if ($request->hasFile('profile_photo')) {
-            // Delete old photo if exists
             if ($student->profile_photo) {
                 Storage::disk('public')->delete('students/' . $student->profile_photo);
             }
-            
             $path = $request->file('profile_photo')->store('students', 'public');
             $validated['profile_photo'] = basename($path);
         }
@@ -100,20 +138,14 @@ class StudentController extends Controller
     public function destroy(Student $student)
     {
         try {
-            // Delete profile photo if exists
             if ($student->profile_photo) {
                 Storage::disk('public')->delete('students/' . $student->profile_photo);
             }
-
-            // Delete related face encodings (cascade should handle this, but just in case)
             $student->faceEncodings()->delete();
-            
-            // Delete student (attendances will be cascade deleted)
             $student->delete();
 
             return redirect()->route('students.index')
                 ->with('success', 'Student deleted successfully.');
-                
         } catch (\Exception $e) {
             return redirect()->route('students.index')
                 ->with('error', 'Failed to delete student. Please try again.');
@@ -135,46 +167,40 @@ class StudentController extends Controller
         try {
             return Cache::remember('face_model_classes', 300, function () {
                 $response = Http::timeout(10)->get($this->apiUrl . '/api/model-info');
-                
                 if ($response->successful()) {
                     $data = $response->json();
                     return $data['model_info']['classes'] ?? [];
                 }
-                
                 Log::warning('Failed to fetch model info', [
                     'status' => $response->status(),
                     'response' => $response->body()
                 ]);
-                
                 return [];
             });
-            
         } catch (\Exception $e) {
             Log::error('Error fetching model classes', [
                 'error' => $e->getMessage(),
                 'api_url' => $this->apiUrl
             ]);
-            
             return [];
         }
     }
 
     /**
      * Check if student name is registered in face model
+     *
+     * @param string $studentName
+     * @return bool
      */
     public function isStudentRegistered($studentName)
     {
         $registeredClasses = $this->getRegisteredClasses();
-        
-        // Normalize names untuk pencocokan yang lebih akurat
         $normalizedStudentName = strtolower(trim($studentName));
-        
         foreach ($registeredClasses as $className) {
             if (strtolower(trim($className)) === $normalizedStudentName) {
                 return true;
             }
         }
-        
         return false;
     }
 
@@ -187,18 +213,16 @@ class StudentController extends Controller
     {
         try {
             $classes = $this->getRegisteredClasses();
-            
             return response()->json([
                 'success' => true,
                 'model_info' => [
                     'classes' => $classes,
                     'total_registered' => count($classes),
-                    'last_updated' => Cache::has('face_model_classes') ? 
-                                     'From cache (updated within 5 minutes)' : 
-                                     'Just fetched from API'
+                    'last_updated' => Cache::has('face_model_classes') ?
+                        'From cache (updated within 5 minutes)' :
+                        'Just fetched from API'
                 ]
             ]);
-            
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -208,24 +232,30 @@ class StudentController extends Controller
     }
 
     /**
-     * API: Get face status for specific student
+     * Get face registration status for individual student (API endpoint)
      */
     public function getFaceStatus(Student $student)
     {
         try {
-            $isRegistered = $this->isStudentRegistered($student->name);
-            
+            $status = $student->face_registration_status;
+
             return response()->json([
                 'success' => true,
-                'is_registered' => $isRegistered,
+                'student_id' => $student->id,
                 'student_name' => $student->name,
-                'registration_status' => $isRegistered ? 'registered' : 'not_registered'
+                'status' => $status['status'],
+                'message' => $status['message']
             ]);
-            
         } catch (\Exception $e) {
+            \Log::error('Failed to get face status', [
+                'student_id' => $student->id,
+                'error' => $e->getMessage()
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to check face status: ' . $e->getMessage()
+                'status' => 'error',
+                'message' => 'Failed to check face status'
             ], 500);
         }
     }
@@ -238,14 +268,12 @@ class StudentController extends Controller
         try {
             Cache::forget('face_model_classes');
             $classes = $this->getRegisteredClasses();
-            
             return response()->json([
                 'success' => true,
                 'message' => 'Model cache refreshed successfully',
                 'total_classes' => count($classes),
                 'classes' => $classes
             ]);
-            
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -261,5 +289,124 @@ class StudentController extends Controller
             'success' => false,
             'message' => 'Face registration is now managed through the training pipeline. Please contact administrator.'
         ], 400);
+    }
+
+    /**
+     * Refresh face registration status (clear cache)
+     */
+    public function refreshFaceStatus(Student $student)
+    {
+        try {
+            Cache::forget("student_face_registered_{$student->id}");
+            $status = $student->face_registration_status;
+            return response()->json([
+                'success' => true,
+                'message' => 'Face status refreshed',
+                'status' => $status
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to refresh face status', [
+                'student_id' => $student->id,
+                'error' => $e->getMessage()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to refresh face status'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get API status like dashboard
+     */
+    public function getApiStatus()
+    {
+        try {
+            $apiUrl = config('app.python_api_url', 'http://localhost:5000');
+            $response = Http::timeout(3)->get($apiUrl . '/api/health');
+            if ($response->successful()) {
+                return response()->json([
+                    'status' => 'connected',
+                    'message' => 'API Flask running',
+                    'data' => $response->json()
+                ]);
+            } else {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'API responded with status: ' . $response->status()
+                ], 500);
+            }
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            return response()->json([
+                'status' => 'offline',
+                'message' => 'API Flask tidak berjalan - start Flask server terlebih dahulu'
+            ], 503);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Connection failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all students with their face registration status
+     */
+    public function getStudentsWithFaceStatus()
+    {
+        try {
+            $registeredClasses = $this->getRegisteredClasses();
+            $students = Student::select(['id', 'name'])->get();
+            
+            $studentsWithStatus = $students->map(function ($student) use ($registeredClasses) {
+                $normalizedStudentName = strtolower(trim($student->name));
+                $isRegistered = false;
+                
+                foreach ($registeredClasses as $className) {
+                    if (strtolower(trim($className)) === $normalizedStudentName) {
+                        $isRegistered = true;
+                        break;
+                    }
+                }
+                
+                return [
+                    'id' => $student->id,
+                    'name' => $student->name,
+                    'status' => $isRegistered ? 'registered' : 'not_registered',
+                    'message' => $isRegistered ? 'Face registered in model' : 'Face not registered'
+                ];
+            });
+            
+            return response()->json([
+                'success' => true,
+                'students' => $studentsWithStatus,
+                'total_registered_classes' => count($registeredClasses),
+                'api_status' => 'connected'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error getting students face status', [
+                'error' => $e->getMessage(),
+                'api_url' => $this->apiUrl
+            ]);
+            
+            // Return all students with API error status
+            $students = Student::select(['id', 'name'])->get();
+            $studentsWithStatus = $students->map(function ($student) {
+                return [
+                    'id' => $student->id,
+                    'name' => $student->name,
+                    'status' => 'api_error',
+                    'message' => 'Unable to check face registration status'
+                ];
+            });
+            
+            return response()->json([
+                'success' => false,
+                'students' => $studentsWithStatus,
+                'api_status' => 'error',
+                'message' => 'Failed to fetch model info: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

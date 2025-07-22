@@ -1,244 +1,270 @@
-{{-- resources/views/students/show.blade.php --}}
+{{-- resources/views/students/show.blade.php - OPTIMIZED VERSION --}}
 @extends('layouts.app')
 
 @section('title', 'Student Details')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Student Details</h1>
-    <div>
-        <a href="{{ route('students.faces', $student) }}" class="btn btn-primary me-2">
-            <i class="fas fa-camera"></i> Manage Face
-        </a>
-        <a href="{{ route('students.edit', $student) }}" class="btn btn-warning me-2">
-            <i class="fas fa-edit"></i> Edit
-        </a>
-        <a href="{{ route('students.index') }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> Back to Students
-        </a>
-    </div>
-</div>
-
-<div class="row">
-    {{-- Student Profile --}}
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body text-center">
-                <div class="mb-3">
-                    @if($student->profile_photo)
-                        <img src="{{ $student->profile_photo_url }}" 
-                             class="rounded-circle mb-3" 
-                             width="150" height="150" 
-                             style="object-fit: cover;"
-                             alt="{{ $student->name }}">
-                    @else
-                        <div class="bg-light border rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
-                             style="width: 150px; height: 150px;">
-                            <i class="fas fa-user fa-4x text-muted"></i>
-                        </div>
-                    @endif
-                </div>
-                
-                <h4>{{ $student->name }}</h4>
-                <p class="text-muted mb-1">{{ $student->student_id }}</p>
-                <span class="badge bg-{{ $student->status === 'active' ? 'success' : 
-                      ($student->status === 'graduated' ? 'info' : 'secondary') }} fs-6">
-                    {{ ucfirst($student->status) }}
-                </span>
-                
-                <hr>
-                
-                <div class="text-start">
-                    <p class="mb-2">
-                        <i class="fas fa-envelope text-muted me-2"></i>
-                        <small>{{ $student->email }}</small>
-                    </p>
-                    @if($student->phone)
-                        <p class="mb-2">
-                            <i class="fas fa-phone text-muted me-2"></i>
-                            <small>{{ $student->phone }}</small>
-                        </p>
-                    @endif
-                    <p class="mb-2">
-                        <i class="fas fa-graduation-cap text-muted me-2"></i>
-                        <small>{{ $student->program_study }}</small>
-                    </p>
-                    <p class="mb-2">
-                        <i class="fas fa-university text-muted me-2"></i>
-                        <small>{{ $student->faculty }}</small>
-                    </p>
-                    <p class="mb-0">
-                        <i class="fas fa-calendar text-muted me-2"></i>
-                        <small>Semester {{ $student->semester }}</small>
-                    </p>
-                </div>
-            </div>
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <h2>Student Details</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('students.index') }}">Students</a></li>
+                    <li class="breadcrumb-item active">{{ $student->name }}</li>
+                </ol>
+            </nav>
         </div>
-
-        {{-- Face Registration Status --}}
-        <div class="card mt-3">
-            <div class="card-header">
-                <h6 class="card-title mb-0">Face Registration</h6>
-            </div>
-            <div class="card-body">
-                @php
-                    $faceCount = $student->faceEncodings->count();
-                @endphp
-                
-                @if($faceCount > 0)
-                    <div class="alert alert-success">
-                        <i class="fas fa-check-circle"></i>
-                        <strong>Registered</strong><br>
-                        {{ $faceCount }} face encoding(s) available
-                    </div>
-                @else
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <strong>Not Registered</strong><br>
-                        No face encodings found
-                    </div>
-                @endif
-                
-                <a href="{{ route('students.faces', $student) }}" class="btn btn-primary btn-sm w-100">
-                    <i class="fas fa-camera"></i> Manage Face Registration
-                </a>
-            </div>
+        <div class="col-md-6 text-end">
+            <a href="{{ route('students.edit', $student) }}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Edit Student
+            </a>
+            <a href="{{ route('students.faces', $student) }}" class="btn btn-info">
+                <i class="fas fa-user-circle"></i> Manage Faces
+            </a>
         </div>
     </div>
 
-    {{-- Student Details & Attendance --}}
-    <div class="col-md-8">
-        {{-- Quick Stats --}}
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card bg-primary text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h4 class="mb-0">{{ $student->attendances->count() }}</h4>
-                                <small>Total Classes</small>
-                            </div>
-                            <i class="fas fa-calendar-check fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card bg-success text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h4 class="mb-0">{{ $student->attendances->where('status', 'present')->count() }}</h4>
-                                <small>Present</small>
-                            </div>
-                            <i class="fas fa-check fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card bg-warning text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h4 class="mb-0">{{ $student->attendances->where('status', 'late')->count() }}</h4>
-                                <small>Late</small>
-                            </div>
-                            <i class="fas fa-clock fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {{-- Recent Attendance --}}
-        <div class="card">
-            <div class="card-header">
-                <h6 class="card-title mb-0">Recent Attendance</h6>
-            </div>
-            <div class="card-body">
-                @if($student->attendances->count() > 0)
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Course</th>
-                                    <th>Check In</th>
-                                    <th>Status</th>
-                                    <th>Confidence</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($student->attendances->take(10) as $attendance)
-                                <tr>
-                                    <td>{{ $attendance->date->format('d M Y') }}</td>
-                                    <td>
-                                        <small>
-                                            <strong>{{ $attendance->classModel->course->course_name }}</strong><br>
-                                            {{ $attendance->classModel->course->course_code }}
-                                        </small>
-                                    </td>
-                                    <td>{{ $attendance->formatted_check_in }}</td>
-                                    <td>
-                                        <span class="badge bg-{{ $attendance->status === 'present' ? 'success' : 
-                                              ($attendance->status === 'late' ? 'warning' : 'danger') }}">
-                                            {{ ucfirst($attendance->status) }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        @if($attendance->similarity_score)
-                                            <small class="text-muted">{{ $attendance->similarity_percentage }}</small>
-                                        @else
-                                            <small class="text-muted">-</small>
-                                        @endif
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    @if($student->attendances->count() > 10)
-                        <div class="text-center mt-3">
-                            <small class="text-muted">Showing 10 of {{ $student->attendances->count() }} records</small>
-                        </div>
-                    @endif
-                @else
-                    <div class="text-center text-muted py-4">
-                        <i class="fas fa-calendar-times fa-3x mb-2"></i>
-                        <p>No attendance records found</p>
-                    </div>
-                @endif
-            </div>
-        </div>
-
-        {{-- Face Encodings Info (if any) --}}
-        @if($student->faceEncodings->count() > 0)
-            <div class="card mt-3">
+    <div class="row">
+        <div class="col-md-4">
+            {{-- Student Info Card --}}
+            <div class="card">
                 <div class="card-header">
-                    <h6 class="card-title mb-0">Face Encodings</h6>
+                    <h5 class="card-title mb-0">Student Information</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        @foreach($student->faceEncodings as $encoding)
-                            <div class="col-md-6 mb-2">
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-fingerprint text-primary me-2"></i>
-                                    <div>
-                                        <small>
-                                            <strong>Encoding #{{ $loop->iteration }}</strong><br>
-                                            <span class="text-muted">{{ $encoding->created_at->format('d M Y H:i') }}</span>
-                                        </small>
-                                    </div>
-                                </div>
+                    <div class="text-center mb-3">
+                        @if($student->profile_photo_url)
+                            <img src="{{ $student->profile_photo_url }}" alt="Profile" 
+                                 class="rounded-circle" width="120" height="120">
+                        @else
+                            <div class="bg-secondary rounded-circle d-inline-flex align-items-center justify-content-center" 
+                                 style="width: 120px; height: 120px;">
+                                <i class="fas fa-user fa-3x text-white"></i>
                             </div>
-                        @endforeach
+                        @endif
+                    </div>
+                    
+                    <table class="table table-borderless">
+                        <tr>
+                            <td><strong>Name:</strong></td>
+                            <td>{{ $student->name }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Student ID:</strong></td>
+                            <td>{{ $student->student_id }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Email:</strong></td>
+                            <td>{{ $student->email }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Program:</strong></td>
+                            <td>{{ $student->program_study }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Faculty:</strong></td>
+                            <td>{{ $student->faculty }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Semester:</strong></td>
+                            <td>{{ $student->semester }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Phone:</strong></td>
+                            <td>{{ $student->phone ?: '-' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Status:</strong></td>
+                            <td>
+                                <span class="badge bg-{{ $student->status === 'active' ? 'success' : 'secondary' }}">
+                                    {{ ucfirst($student->status) }}
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            {{-- Face Registration Status Card --}}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">Face Registration Status</h6>
+                </div>
+                <div class="card-body">
+                    @php $faceStatus = $student->face_registration_status @endphp
+                    
+                    @if($faceStatus['status'] === 'registered')
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i> {{ $faceStatus['message'] }}
+                        </div>
+                    @elseif($faceStatus['status'] === 'not_registered')
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> {{ $faceStatus['message'] }}
+                            <br><small>Upload face photos to enable recognition</small>
+                        </div>
+                    @elseif($faceStatus['status'] === 'api_offline')
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> {{ $faceStatus['message'] }}
+                            <br><small>Start Flask API service to check face registration</small>
+                        </div>
+                    @elseif($faceStatus['status'] === 'api_error')
+                        <div class="alert alert-danger">
+                            <i class="fas fa-times-circle"></i> {{ $faceStatus['message'] }}
+                            <br><small>Check API connection and try again</small>
+                        </div>
+                    @else
+                        <div class="alert alert-secondary">
+                            <i class="fas fa-question-circle"></i> {{ $faceStatus['message'] }}
+                        </div>
+                    @endif
+                    
+                    <div class="text-center mt-2">
+                        <button class="btn btn-sm btn-outline-primary" onclick="refreshFaceStatus()">
+                            <i class="fas fa-sync-alt"></i> Refresh Status
+                        </button>
                     </div>
                 </div>
             </div>
-        @endif
+        </div>
+
+        <div class="col-md-8">
+            {{-- Attendance Statistics --}}
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ $student->attendance_stats['total'] }}</h4>
+                                    <small>Total Attendance</small>
+                                </div>
+                                <i class="fas fa-calendar-check fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ $student->attendance_stats['present'] }}</h4>
+                                    <small>Present</small>
+                                </div>
+                                <i class="fas fa-check fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ $student->attendance_stats['late'] }}</h4>
+                                    <small>Late</small>
+                                </div>
+                                <i class="fas fa-clock fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Recent Attendance --}}
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">Recent Attendance</h6>
+                </div>
+                <div class="card-body">
+                    @if($student->recent_attendances->count() > 0)
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Course</th>
+                                        <th>Check In</th>
+                                        <th>Status</th>
+                                        <th>Confidence</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($student->recent_attendances as $attendance)
+                                    <tr>
+                                        <td>{{ $attendance->date->format('d M Y') }}</td>
+                                        <td>
+                                            <small>
+                                                <strong>{{ $attendance->classModel->course->course_name }}</strong><br>
+                                                {{ $attendance->classModel->course->course_code }}
+                                            </small>
+                                        </td>
+                                        <td>{{ $attendance->formatted_check_in }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ $attendance->status === 'present' ? 'success' : 
+                                                  ($attendance->status === 'late' ? 'warning' : 'danger') }}">
+                                                {{ ucfirst($attendance->status) }}
+                                            </span>
+                                        </td>
+                                        <td>{{ $attendance->similarity_percentage }}</td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="text-center mt-3">
+                            <p class="text-muted">
+                                Attendance Rate: <strong>{{ $student->attendance_stats['rate'] }}%</strong>
+                            </p>
+                        </div>
+                    @else
+                        <div class="text-center py-4">
+                            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No attendance records found</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
+<script>
+function refreshFaceStatus() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    
+    // Show loading
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+    btn.disabled = true;
+    
+    // Clear cache and reload
+    fetch(`{{ route('api.students.refresh-face-status', $student) }}`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Failed to refresh status: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error refreshing status');
+    })
+    .finally(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+}
+</script>
 @endsection
