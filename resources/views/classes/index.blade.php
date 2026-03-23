@@ -17,7 +17,7 @@
 <div class="card">
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover datatable">
                 <thead class="table-light">
                     <tr>
                         <th>Course</th>
@@ -71,17 +71,17 @@
                             </span>
                         </td>
                         <td>
-                            <div class="btn-group btn-group-sm">
+                            <div class="d-flex gap-2">
                                 <a href="{{ route('attendance.scanner', $class) }}"
-                                    class="btn btn-outline-primary" title="Scanner">
+                                    class="btn btn-sm btn-light text-primary" title="Scanner">
                                     <i class="fas fa-camera"></i>
                                 </a>
                                 <a href="{{ route('classes.edit', $class) }}"
-                                    class="btn btn-outline-warning" title="Edit">
+                                    class="btn btn-sm btn-light text-warning" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 <button onclick="deleteClass({{ $class->id }}, '{{ $class->course->course_name }} - {{ $class->cohort ? $class->cohort->name : '' }}')"
-                                    class="btn btn-outline-danger" title="Delete">
+                                    class="btn btn-sm btn-light text-danger" title="Delete">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -102,11 +102,7 @@
             </table>
         </div>
 
-        @if($classes->hasPages())
-        <div class="d-flex justify-content-center mt-4">
-            {{ $classes->links() }}
-        </div>
-        @endif
+        <!-- Pagination handled by DataTables -->
     </div>
 </div>
 

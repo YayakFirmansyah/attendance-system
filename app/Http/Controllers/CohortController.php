@@ -17,7 +17,7 @@ class CohortController extends Controller
                   ->orWhere('program_studi', 'like', "%{$search}%")
                   ->orWhere('kelas', 'like', "%{$search}%");
         }
-        $cohorts = $query->latest()->paginate(10);
+        $cohorts = $query->latest()->get();
         return view('cohorts.index', compact('cohorts'));
     }
 

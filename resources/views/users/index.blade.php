@@ -16,7 +16,7 @@
 <div class="card">
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover datatable">
                 <thead class="table-light">
                     <tr>
                         <th>#</th>
@@ -32,7 +32,7 @@
                 <tbody>
                     @forelse($users as $user)
                         <tr>
-                            <td>{{ $loop->iteration + ($users->currentPage() - 1) * $users->perPage() }}</td>
+                            <td>{{ $loop->iteration }}</td>
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="rounded-circle bg-{{ $user->role === 'admin' ? 'danger' : 'primary' }} text-white d-flex align-items-center justify-content-center me-3" 
@@ -66,18 +66,18 @@
                                 </small>
                             </td>
                             <td>
-                                <div class="btn-group btn-group-sm">
+                                <div class="d-flex gap-2">
                                     <a href="{{ route('users.show', $user) }}" 
-                                       class="btn btn-outline-info btn-sm">
+                                       class="btn btn-sm btn-light text-info" title="View Details">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                     <a href="{{ route('users.edit', $user) }}" 
-                                       class="btn btn-outline-warning btn-sm">
+                                       class="btn btn-sm btn-light text-warning" title="Edit User">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     @if($user->id !== auth()->id())
                                         <button type="button" 
-                                                class="btn btn-outline-danger btn-sm" 
+                                                class="btn btn-sm btn-light text-danger" title="Delete User"
                                                 onclick="confirmDelete({{ $user->id }}, '{{ $user->name }}')">
                                             <i class="fas fa-trash"></i>
                                         </button>
@@ -97,12 +97,7 @@
             </table>
         </div>
 
-        <!-- Pagination -->
-        @if($users->hasPages())
-            <div class="d-flex justify-content-center mt-3">
-                {{ $users->links() }}
-            </div>
-        @endif
+        <!-- Pagination handled by DataTables -->
     </div>
 </div>
 

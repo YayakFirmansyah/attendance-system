@@ -15,7 +15,7 @@ class ClassController extends Controller
         $classes = ClassModel::with(['course.lecturer', 'room', 'cohort'])
             ->orderBy('day')
             ->orderBy('start_time')
-            ->paginate(10);
+            ->get();
 
         return view('classes.index', compact('classes'));
     }

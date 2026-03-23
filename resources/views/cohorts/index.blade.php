@@ -30,7 +30,7 @@
     <div class="card border-0 shadow-sm rounded-4">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0 datatable">
                     <thead class="bg-light">
                         <tr>
                             <th class="ps-4">Nama Rombel</th>
@@ -48,16 +48,18 @@
                                 <td>{{ $cohort->angkatan }} / Kelas {{ $cohort->kelas }}</td>
                                 <td>Semester {{ $cohort->semester }}</td>
                                 <td class="pe-4 text-end">
-                                    <a href="{{ route('cohorts.edit', $cohort) }}" class="btn btn-sm btn-outline-primary rounded-pill">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </a>
-                                    <form action="{{ route('cohorts.destroy', $cohort) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus cohort ini?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button class="btn btn-sm btn-outline-danger rounded-pill" type="submit">
-                                            <i class="fas fa-trash"></i> Hapus
-                                        </button>
-                                    </form>
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <a href="{{ route('cohorts.edit', $cohort) }}" class="btn btn-sm btn-light text-warning" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form action="{{ route('cohorts.destroy', $cohort) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus cohort ini?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="btn btn-sm btn-light text-danger" type="submit" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
@@ -69,11 +71,7 @@
                 </table>
             </div>
         </div>
-        @if($cohorts->hasPages())
-            <div class="card-footer bg-white border-0 mt-2">
-                {{ $cohorts->links('pagination::bootstrap-5') }}
-            </div>
-        @endif
+        <!-- Pagination handled by DataTables -->
     </div>
 </div>
 @endsection

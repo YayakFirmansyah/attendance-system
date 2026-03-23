@@ -141,6 +141,22 @@ class DashboardController extends Controller
         ));
     }
 
+    public function mySchedules()
+    {
+        $dosenId = Auth::id();
+        
+        $classes = ClassModel::with(['course.lecturer', 'room', 'cohort'])
+            ->where('status', 'active')
+            ->whereHas('course', function ($query) use ($dosenId) {
+                $query->where('lecturer_id', $dosenId);
+            })
+            ->orderByRaw("FIELD(day, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')")
+            ->orderBy('start_time')
+            ->get();
+            
+        return view('dosen.schedules', compact('classes'));
+    }
+
     public function apiStatus()
     {
         try {

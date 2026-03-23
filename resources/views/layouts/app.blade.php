@@ -16,6 +16,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 
     <style>
         :root {
@@ -37,14 +39,14 @@
 
             --bs-primary: var(--primary-color);
             --bs-primary-rgb: 109, 40, 217;
-            --bs-success: #7c3aed;
-            --bs-success-rgb: 124, 58, 237;
-            --bs-info: #8b5cf6;
-            --bs-info-rgb: 139, 92, 246;
-            --bs-warning: #6d28d9;
-            --bs-warning-rgb: 109, 40, 217;
-            --bs-danger: #5b21b6;
-            --bs-danger-rgb: 91, 33, 182;
+            --bs-success: #10b981;
+            --bs-success-rgb: 16, 185, 129;
+            --bs-info: #0ea5e9;
+            --bs-info-rgb: 14, 165, 233;
+            --bs-warning: #f59e0b;
+            --bs-warning-rgb: 245, 158, 11;
+            --bs-danger: #ef4444;
+            --bs-danger-rgb: 239, 68, 68;
         }
 
         [data-bs-theme="dark"] {
@@ -460,22 +462,6 @@
             color: var(--primary-color) !important;
         }
 
-        .text-success {
-            color: #7c3aed !important;
-        }
-
-        .text-info {
-            color: #8b5cf6 !important;
-        }
-
-        .text-warning {
-            color: #6d28d9 !important;
-        }
-
-        .text-danger {
-            color: #5b21b6 !important;
-        }
-
         .border-success,
         .border-info,
         .border-warning,
@@ -642,6 +628,20 @@
                     </li>
                 </div>
                 @endif
+
+                <!-- Dosen Only Section -->
+                @if(auth()->check() && auth()->user()->isDosen())
+                <div class="nav-section mt-3">
+                    <div class="nav-section-title">Lecturer Panel</div>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('dosen.schedules') ? 'active' : '' }}"
+                            href="{{ route('dosen.schedules') }}">
+                            <i class="fas fa-calendar-alt"></i>
+                            My Schedules
+                        </a>
+                    </li>
+                </div>
+                @endif
             </ul>
         </div>
 
@@ -730,8 +730,24 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
     <script>
+        // Init default datatable
+        $(document).ready(function() {
+            if($('.datatable').length > 0) {
+                $('.datatable').DataTable({
+                    "language": {
+                        "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json"
+                    },
+                    "pageLength": 25,
+                    "responsive": true
+                });
+            }
+        });
+
         // CSRF Setup
         $.ajaxSetup({
             headers: {

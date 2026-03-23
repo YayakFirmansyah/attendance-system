@@ -18,7 +18,7 @@
 <div class="card border-0 shadow-sm rounded-4 mb-5">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0 datatable">
                 <thead class="bg-light text-muted small text-uppercase">
                     <tr>
                         <th class="ps-4 py-3 font-weight-medium border-0 rounded-start">Code</th>
@@ -49,12 +49,12 @@
                             </span>
                         </td>
                         <td class="pe-4">
-                            <div class="btn-group btn-group-sm">
-                                <a href="{{ route('courses.edit', $course) }}" class="btn btn-outline-warning" title="Edit">
+                            <div class="d-flex justify-content-end gap-2">
+                                <a href="{{ route('courses.edit', $course) }}" class="btn btn-sm btn-light text-warning" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 <button onclick="deleteCourse({{ $course->id }}, '{{ $course->course_name }}')"
-                                    class="btn btn-outline-danger" title="Delete">
+                                    class="btn btn-sm btn-light text-danger" title="Delete">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -72,11 +72,7 @@
             </table>
         </div>
 
-        @if($courses->hasPages())
-        <div class="d-flex justify-content-center mt-3">
-            {{ $courses->links() }}
-        </div>
-        @endif
+        <!-- Pagination handled by DataTables -->
     </div>
 </div>
 

@@ -33,101 +33,13 @@
             <span id="apiStatusMessage">Checking API status...</span>
         </div>
 
-        {{-- Filters & Search Card --}}
-        <div class="card border-0 shadow-sm rounded-4 mb-4">
-            <div class="card-body p-4">
-                <form method="GET" action="{{ route('students.index') }}" id="filterForm">
-                    <div class="row g-3">
-                        {{-- Search Input --}}
-                        <div class="col-md-4">
-                            <label class="form-label small text-muted">Search Students</label>
-                            <div class="input-group">
-                                <span class="input-group-text">
-                                    <i class="fas fa-search"></i>
-                                </span>
-                                <input type="text" class="form-control" name="search" value="{{ request('search') }}"
-                                    placeholder="Name, Student ID, Email...">
-                                <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        {{-- Semester Filter --}}
-                        <div class="col-md-2">
-                            <label class="form-label small text-muted">Semester</label>
-                            <select class="form-select" name="semester">
-                                <option value="">All Semesters</option>
-                                @for ($i = 1; $i <= 8; $i++)
-                                    <option value="{{ $i }}" {{ request('semester') == $i ? 'selected' : '' }}>
-                                        Semester {{ $i }}
-                                    </option>
-                                @endfor
-                            </select>
-                        </div>
-
-                        {{-- Program Study Filter --}}
-                        <div class="col-md-3">
-                            <label class="form-label small text-muted">Program Study</label>
-                            <select class="form-select" name="program">
-                                <option value="">All Programs</option>
-                                @php
-                                    $programs = \App\Models\Cohort::query()
-                                        ->whereNotNull('program_studi')
-                                        ->distinct()
-                                        ->orderBy('program_studi')
-                                        ->pluck('program_studi');
-                                @endphp
-                                @foreach ($programs as $program)
-                                    <option value="{{ $program }}"
-                                        {{ request('program') == $program ? 'selected' : '' }}>
-                                        {{ $program }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        {{-- Status Filter --}}
-                        <div class="col-md-2">
-                            <label class="form-label small text-muted">Status</label>
-                            <select class="form-select" name="status">
-                                <option value="">All Status</option>
-                                <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
-                                <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive
-                                </option>
-                                <option value="graduated" {{ request('status') == 'graduated' ? 'selected' : '' }}>
-                                    Graduated</option>
-                            </select>
-                        </div>
-
-                        {{-- Reset Filters --}}
-                        <div class="col-md-1 d-flex align-items-end">
-                            <a href="{{ route('students.index') }}" class="btn btn-outline-warning w-100">
-                                <i class="fas fa-undo"></i>
-                            </a>
-                        </div>
-                    </div>
-
-                    {{-- Results Counter --}}
-                    <div class="row mt-3">
-                        <div class="col">
-                            <small class="text-muted">
-                                Showing {{ $students->count() }} of {{ $students->total() }} students
-                                @if (request()->hasAny(['search', 'semester', 'program', 'status']))
-                                    <span class="badge bg-info ms-2">Filtered</span>
-                                @endif
-                            </small>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <!-- Search & Filters removed, relying on DataTables -->
 
         {{-- Students Table Card --}}
         <div class="card border-0 shadow-sm rounded-4 mb-5">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0 datatable">
                         <thead class="bg-light text-muted small text-uppercase">
                             <tr>
                                 <th class="ps-4 py-3 font-weight-medium border-0 rounded-start">Student</th>
@@ -210,34 +122,23 @@
 
                                     {{-- Actions --}}
                                     <td class="pe-3">
-                                        <div class="d-flex gap-1 flex-wrap">
-                                            {{-- View Button --}}
+                                        <div class="d-flex gap-2">
                                             <a href="{{ route('students.show', $student) }}"
-                                                class="btn btn-sm btn-outline-primary" title="View Details">
+                                                class="btn btn-sm btn-light text-info" title="View Details">
                                                 <i class="fas fa-eye"></i>
-                                                <span class="d-none d-lg-inline ms-1">View</span>
                                             </a>
-
-                                            {{-- Edit Button --}}
                                             <a href="{{ route('students.edit', $student) }}"
-                                                class="btn btn-sm btn-outline-secondary" title="Edit Student">
+                                                class="btn btn-sm btn-light text-warning" title="Edit Student">
                                                 <i class="fas fa-edit"></i>
-                                                <span class="d-none d-lg-inline ms-1">Edit</span>
                                             </a>
-
-                                            {{-- Manage Faces Button --}}
                                             <a href="{{ route('students.faces', $student) }}"
-                                                class="btn btn-sm btn-outline-info" title="Manage Faces">
+                                                class="btn btn-sm btn-light text-primary" title="Manage Faces">
                                                 <i class="fas fa-camera"></i>
-                                                <span class="d-none d-xl-inline ms-1">Faces</span>
                                             </a>
-
-                                            {{-- Delete Button --}}
-                                            <button class="btn btn-sm btn-outline-danger"
+                                            <button class="btn btn-sm btn-light text-danger"
                                                 onclick="deleteStudent({{ $student->id }}, '{{ $student->name }}')"
                                                 title="Delete Student">
                                                 <i class="fas fa-trash"></i>
-                                                <span class="d-none d-xl-inline ms-1">Delete</span>
                                             </button>
                                         </div>
                                     </td>
@@ -266,90 +167,7 @@
                 </div>
             </div>
 
-            {{-- Pagination --}}
-            @if ($students->hasPages())
-                <div class="card-footer bg-light">
-                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center">
-                        {{-- Pagination Info --}}
-                        <div class="mb-2 mb-sm-0">
-                            <small class="text-muted">
-                                Showing {{ $students->firstItem() }} to {{ $students->lastItem() }}
-                                of {{ $students->total() }} results
-                            </small>
-                        </div>
-
-                        {{-- Pagination Links --}}
-                        <div class="d-flex justify-content-center">
-                            <nav aria-label="Students pagination">
-                                <ul class="pagination pagination-sm mb-0">
-                                    {{-- Previous Page Link --}}
-                                    @if ($students->onFirstPage())
-                                        <li class="page-item disabled">
-                                            <span class="page-link">
-                                                <i class="fas fa-chevron-left"></i>
-                                                <span class="d-none d-sm-inline ms-1">Previous</span>
-                                            </span>
-                                        </li>
-                                    @else
-                                        <li class="page-item">
-                                            <a class="page-link" href="{{ $students->previousPageUrl() }}"
-                                                rel="prev">
-                                                <i class="fas fa-chevron-left"></i>
-                                                <span class="d-none d-sm-inline ms-1">Previous</span>
-                                            </a>
-                                        </li>
-                                    @endif
-
-                                    {{-- Pagination Elements --}}
-                                    @foreach ($students->getUrlRange(1, $students->lastPage()) as $page => $url)
-                                        @if ($page == $students->currentPage())
-                                            <li class="page-item active">
-                                                <span class="page-link">{{ $page }}</span>
-                                            </li>
-                                        @else
-                                            {{-- Show first page, last page, current page and 2 pages around current --}}
-                                            @if (
-                                                $page == 1 ||
-                                                    $page == $students->lastPage() ||
-                                                    ($page >= $students->currentPage() - 1 && $page <= $students->currentPage() + 1))
-                                                <li class="page-item">
-                                                    <a class="page-link"
-                                                        href="{{ $url }}">{{ $page }}</a>
-                                                </li>
-                                            @elseif ($page == 2 && $students->currentPage() > 4)
-                                                <li class="page-item disabled">
-                                                    <span class="page-link">...</span>
-                                                </li>
-                                            @elseif ($page == $students->lastPage() - 1 && $students->currentPage() < $students->lastPage() - 3)
-                                                <li class="page-item disabled">
-                                                    <span class="page-link">...</span>
-                                                </li>
-                                            @endif
-                                        @endif
-                                    @endforeach
-
-                                    {{-- Next Page Link --}}
-                                    @if ($students->hasMorePages())
-                                        <li class="page-item">
-                                            <a class="page-link" href="{{ $students->nextPageUrl() }}" rel="next">
-                                                <span class="d-none d-sm-inline me-1">Next</span>
-                                                <i class="fas fa-chevron-right"></i>
-                                            </a>
-                                        </li>
-                                    @else
-                                        <li class="page-item disabled">
-                                            <span class="page-link">
-                                                <span class="d-none d-sm-inline me-1">Next</span>
-                                                <i class="fas fa-chevron-right"></i>
-                                            </span>
-                                        </li>
-                                    @endif
-                                </ul>
-                            </nav>
-                        </div>
-                    </div>
-                </div>
-            @endif
+            <!-- Pagination handled by DataTables -->
         </div>
     </div>
 

@@ -65,8 +65,7 @@ class StudentController extends Controller
         }
 
         $students = $query->orderBy('name')
-            ->paginate(20)
-            ->withQueryString();
+            ->get();
 
         return view('students.index', compact('students'));
     }

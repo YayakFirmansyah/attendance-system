@@ -57,6 +57,9 @@ Route::middleware(['auth'])->group(function () {
 
     // DOSEN ONLY ROUTES - Attendance Management
     Route::middleware(['role:dosen'])->group(function () {
+        // Lecturer Schedules
+        Route::get('/my-schedules', [DashboardController::class, 'mySchedules'])->name('dosen.schedules');
+
         // Attendance scanning - HANYA DOSEN
         Route::prefix('attendance')->name('attendance.')->group(function () {
             Route::get('/scanner/{class}', [AttendanceController::class, 'scanner'])->name('scanner');
