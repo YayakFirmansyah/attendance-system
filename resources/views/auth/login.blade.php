@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,11 +17,13 @@
             align-items: center;
             justify-content: center;
         }
+
         .login-wrapper {
             width: 100%;
             max-width: 420px;
             padding: 2rem;
         }
+
         .login-card {
             background: #ffffff;
             border-radius: 24px;
@@ -28,86 +31,101 @@
             padding: 2.5rem 2.25rem;
             border: 1px solid rgba(229, 231, 235, 0.5);
         }
+
         .brand-icon {
             width: 64px;
             height: 64px;
-            background: linear-gradient(135deg, #10b981, #059669);
+            background: linear-gradient(135deg, #6d28d9, #5b21b6);
             color: white;
             border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.75rem;
+            font-size: 1.55rem;
             margin: 0 auto 1.5rem;
-            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
+            box-shadow: 0 10px 15px -3px rgba(109, 40, 217, 0.3);
         }
+
         h4.auth-title {
             font-weight: 700;
             color: #111827;
             text-align: center;
             margin-bottom: 0.5rem;
         }
+
         p.auth-subtitle {
             color: #6b7280;
             text-align: center;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             margin-bottom: 2rem;
         }
-        .form-control, .form-control:focus {
+
+        .form-control,
+        .form-control:focus {
             background-color: #f9fafb;
             border: 1px solid #e5e7eb;
             border-radius: 12px;
-            padding: 0.8rem 1rem;
-            font-size: 0.95rem;
+            padding: 0.72rem 0.9rem;
+            font-size: 0.9rem;
             color: #111827;
             box-shadow: none;
             transition: all 0.2s;
         }
+
         .form-control:focus {
             background-color: #ffffff;
-            border-color: #10b981;
-            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+            border-color: #6d28d9;
+            box-shadow: 0 0 0 4px rgba(109, 40, 217, 0.12);
         }
+
         .form-label {
             font-weight: 500;
             color: #374151;
             font-size: 0.9rem;
             margin-bottom: 0.4rem;
         }
+
         .btn-primary {
-            background: #10b981;
+            background: #6d28d9;
             border: none;
             border-radius: 12px;
-            padding: 0.8rem 1rem;
+            padding: 0.72rem 0.95rem;
             font-weight: 600;
-            font-size: 1rem;
+            font-size: 0.95rem;
             transition: all 0.2s;
-            box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
+            box-shadow: 0 4px 6px -1px rgba(109, 40, 217, 0.25);
         }
-        .btn-primary:hover, .btn-primary:focus {
-            background: #059669;
+
+        .btn-primary:hover,
+        .btn-primary:focus {
+            background: #5b21b6;
             transform: translateY(-1px);
-            box-shadow: 0 6px 8px -1px rgba(16, 185, 129, 0.3);
+            box-shadow: 0 6px 8px -1px rgba(109, 40, 217, 0.35);
         }
+
         .form-check-input:checked {
-            background-color: #10b981;
-            border-color: #10b981;
+            background-color: #6d28d9;
+            border-color: #6d28d9;
         }
+
         .form-check-label {
             font-size: 0.9rem;
             color: #4b5563;
         }
+
         .alert {
             border-radius: 12px;
             font-size: 0.9rem;
             border: none;
         }
+
         .alert-danger {
             background-color: #fef2f2;
             color: #991b1b;
         }
     </style>
 </head>
+
 <body>
     <div class="login-wrapper">
         <div class="login-card">
@@ -120,9 +138,9 @@
             @if ($errors->any())
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
                     <ul class="mb-0 ps-3">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
                     </ul>
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
@@ -130,27 +148,17 @@
 
             <form method="POST" action="{{ route('login') }}">
                 @csrf
-                
+
                 <div class="mb-3">
                     <label for="email" class="form-label">Email Address</label>
-                    <input type="email" 
-                           class="form-control @error('email') is-invalid @enderror" 
-                           id="email" 
-                           name="email" 
-                           value="{{ old('email') }}" 
-                           placeholder="name@example.com"
-                           required 
-                           autofocus>
+                    <input type="email" class="form-control @error('email') is-invalid @enderror" id="email"
+                        name="email" value="{{ old('email') }}" placeholder="name@example.com" required autofocus>
                 </div>
 
                 <div class="mb-4">
                     <label for="password" class="form-label">Password</label>
-                    <input type="password" 
-                           class="form-control @error('password') is-invalid @enderror" 
-                           id="password" 
-                           name="password" 
-                           placeholder="••••••••"
-                           required>
+                    <input type="password" class="form-control @error('password') is-invalid @enderror" id="password"
+                        name="password" placeholder="••••••••" required>
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -177,4 +185,5 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>

@@ -19,9 +19,10 @@
 
     <style>
         :root {
-            --primary-color: #4f46e5;
-            /* Indigo */
-            --primary-hover: #4338ca;
+            --primary-color: #6d28d9;
+            --primary-hover: #5b21b6;
+            --primary-soft: #ede9fe;
+            --primary-border: #c4b5fd;
             --sidebar-bg-light: #ffffff;
             --sidebar-bg-dark: #111827;
             --body-bg-light: #f3f4f6;
@@ -33,6 +34,17 @@
             --border-light: #e5e7eb;
             --border-dark: #334155;
             --transition-speed: 0.3s;
+
+            --bs-primary: var(--primary-color);
+            --bs-primary-rgb: 109, 40, 217;
+            --bs-success: #7c3aed;
+            --bs-success-rgb: 124, 58, 237;
+            --bs-info: #8b5cf6;
+            --bs-info-rgb: 139, 92, 246;
+            --bs-warning: #6d28d9;
+            --bs-warning-rgb: 109, 40, 217;
+            --bs-danger: #5b21b6;
+            --bs-danger-rgb: 91, 33, 182;
         }
 
         [data-bs-theme="dark"] {
@@ -46,6 +58,8 @@
             font-family: 'Inter', sans-serif;
             background-color: var(--bs-body-bg);
             color: var(--bs-body-color);
+            font-size: 0.92rem;
+            line-height: 1.45;
             transition: background-color var(--transition-speed), color var(--transition-speed);
             overflow-x: hidden;
             -webkit-tap-highlight-color: transparent;
@@ -74,12 +88,12 @@
         }
 
         .sidebar-brand {
-            padding: 1.5rem;
+            padding: 1.1rem 1.25rem;
             display: flex;
             align-items: center;
             gap: 12px;
             font-weight: 700;
-            font-size: 1.25rem;
+            font-size: 1.08rem;
             color: var(--primary-color);
             border-bottom: 1px solid var(--border-light);
         }
@@ -90,30 +104,30 @@
         }
 
         .sidebar-brand i {
-            font-size: 1.5rem;
-            background: linear-gradient(135deg, var(--primary-color), #818cf8);
+            font-size: 1.25rem;
+            background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
         .user-profile {
-            padding: 1.25rem 1.5rem;
+            padding: 1rem 1.25rem;
             display: flex;
             align-items: center;
             gap: 12px;
         }
 
         .user-avatar {
-            width: 40px;
-            height: 40px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary-color), #818cf8);
+            background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 600;
-            font-size: 1.1rem;
+            font-size: 0.95rem;
             box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
         }
 
@@ -125,14 +139,14 @@
 
         .user-name {
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.82rem;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
         .user-role {
-            font-size: 0.75rem;
+            font-size: 0.68rem;
             color: #6b7280;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -158,14 +172,15 @@
 
         .sidebar .nav-link {
             color: #4b5563;
-            border-radius: 10px;
+            border-radius: 8px;
             margin-bottom: 0.25rem;
-            padding: 0.75rem 1rem;
+            padding: 0.58rem 0.8rem;
             font-weight: 500;
+            font-size: 0.84rem;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
         [data-bs-theme="dark"] .sidebar .nav-link {
@@ -173,7 +188,7 @@
         }
 
         .sidebar .nav-link i {
-            font-size: 1.1rem;
+            font-size: 0.92rem;
             width: 20px;
             text-align: center;
             color: #9ca3af;
@@ -237,13 +252,13 @@
         }
 
         .top-navbar {
-            height: 64px;
+            height: 56px;
             background: var(--sidebar-bg-light);
             border-bottom: 1px solid var(--border-light);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 1.5rem;
+            padding: 0 1.1rem;
             position: sticky;
             top: 0;
             z-index: 1030;
@@ -258,7 +273,7 @@
         }
 
         .content-wrapper {
-            padding: 1.5rem;
+            padding: 1rem;
             flex-grow: 1;
         }
 
@@ -358,12 +373,12 @@
         /* Card Modernization */
         .card {
             border: 1px solid var(--border-light);
-            border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(15, 23, 42, 0.06);
             background: var(--card-bg-light);
             transition: all var(--transition-speed);
             overflow: hidden;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
         }
 
         [data-bs-theme="dark"] .card {
@@ -375,7 +390,7 @@
         .card-header {
             background: transparent;
             border-bottom: 1px solid var(--border-light);
-            padding: 1.25rem 1.5rem;
+            padding: 0.85rem 1rem;
             font-weight: 600;
         }
 
@@ -384,15 +399,16 @@
         }
 
         .card-body {
-            padding: 1.5rem;
+            padding: 1rem;
         }
 
         /* Form Controls */
         .form-control,
         .form-select {
-            border-radius: 10px;
+            border-radius: 8px;
             border-color: #d1d5db;
-            padding: 0.6rem 1rem;
+            padding: 0.5rem 0.8rem;
+            font-size: 0.88rem;
             background-color: var(--sidebar-bg-light);
             color: var(--text-light);
             transition: border-color 0.2s, box-shadow 0.2s;
@@ -422,9 +438,10 @@
 
         /* Buttons */
         .btn {
-            border-radius: 10px;
-            padding: 0.5rem 1.25rem;
+            border-radius: 8px;
+            padding: 0.43rem 0.95rem;
             font-weight: 500;
+            font-size: 0.86rem;
             transition: all 0.2s;
         }
 
@@ -437,6 +454,70 @@
             background-color: var(--primary-hover);
             border-color: var(--primary-hover);
             transform: translateY(-1px);
+        }
+
+        .text-primary {
+            color: var(--primary-color) !important;
+        }
+
+        .text-success {
+            color: #7c3aed !important;
+        }
+
+        .text-info {
+            color: #8b5cf6 !important;
+        }
+
+        .text-warning {
+            color: #6d28d9 !important;
+        }
+
+        .text-danger {
+            color: #5b21b6 !important;
+        }
+
+        .border-success,
+        .border-info,
+        .border-warning,
+        .border-danger {
+            border-color: var(--primary-border) !important;
+        }
+
+        .bg-primary,
+        .bg-success,
+        .bg-info,
+        .bg-warning,
+        .bg-danger {
+            color: #fff !important;
+        }
+
+        h1,
+        .h1 {
+            font-size: 1.45rem;
+        }
+
+        h2,
+        .h2 {
+            font-size: 1.2rem;
+        }
+
+        h3,
+        .h3 {
+            font-size: 1.05rem;
+        }
+
+        h4,
+        .h4 {
+            font-size: 0.98rem;
+        }
+
+        .table {
+            font-size: 0.84rem;
+        }
+
+        .badge {
+            font-size: 0.72rem;
+            font-weight: 600;
         }
 
         /* Mobile Adjustments */
@@ -502,7 +583,7 @@
         </div>
 
         <!-- Navigation -->
-        <div class="flex-grow-1 overflow-y-auto">
+        <div class="grow overflow-y-auto">
             <ul class="nav flex-column mb-3" style="padding: 0 0.75rem;">
                 <!-- Main Navigation -->
                 <li class="nav-item mt-2">
