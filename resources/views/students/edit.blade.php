@@ -175,7 +175,7 @@
             reader.readAsDataURL(input.files[0]);
         } else {
             // Reset to original image or default
-            @if($student - > profile_photo)
+            @if($student -> profile_photo)
             preview.innerHTML = `
                 <img src="{{ $student->profile_photo_url }}" 
                      class="rounded-circle" 

@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Student;
-use App\Models\FaceEncoding;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
 
 class StudentController extends Controller
 {
@@ -25,9 +25,15 @@ class StudentController extends Controller
     public function index(Request $request)
     {
         $query = Student::select([
-            'id', 'student_id', 'name', 'email', 'program_study',
-            'faculty', 'semester', 'phone', 'status', 'profile_photo'
-        ]);
+            'id',
+            'student_id',
+            'name',
+            'email',
+            'phone',
+            'status',
+            'profile_photo',
+            'cohort_id'
+        ])->with('cohort:id,name,angkatan,fakultas,program_studi,kelas,semester');
 
         if ($request->has('search') && $request->search) {
             $search = $request->search;
@@ -39,11 +45,19 @@ class StudentController extends Controller
         }
 
         if ($request->has('semester') && $request->semester) {
-            $query->where('semester', $request->semester);
+            $query->whereHas('cohort', function ($cohortQuery) use ($request) {
+                $cohortQuery->where('semester', $request->semester);
+            });
         }
 
         if ($request->has('program') && $request->program) {
-            $query->where('program_study', 'like', "%{$request->program}%");
+            $query->whereHas('cohort', function ($cohortQuery) use ($request) {
+                $cohortQuery->where('program_studi', 'like', "%{$request->program}%");
+            });
+        }
+
+        if ($request->has('cohort_id') && $request->cohort_id) {
+            $query->where('cohort_id', $request->cohort_id);
         }
 
         if ($request->has('status') && $request->status) {
@@ -75,11 +89,11 @@ class StudentController extends Controller
     public function create()
     {
         $registeredClasses = $this->getRegisteredClasses();
-        $existingStudents = \App\Models\Student::pluck('name')->map(function($name) {
+        $existingStudents = \App\Models\Student::pluck('name')->map(function ($name) {
             return strtolower(trim($name));
         })->toArray();
 
-        $availableNames = collect($registeredClasses)->filter(function($name) use ($existingStudents) {
+        $availableNames = collect($registeredClasses)->filter(function ($name) use ($existingStudents) {
             return !in_array(strtolower(trim($name)), $existingStudents);
         })->values()->all();
 
@@ -99,6 +113,8 @@ class StudentController extends Controller
             'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'cohort_id' => 'required|exists:cohorts,id'
         ]);
+
+        $this->ensureNameExistsInModelInfo($validated['name']);
 
         if ($request->hasFile('profile_photo')) {
             $path = $request->file('profile_photo')->store('students', 'public');
@@ -128,6 +144,8 @@ class StudentController extends Controller
             'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'cohort_id' => 'required|exists:cohorts,id'
         ]);
+
+        $this->ensureNameExistsInModelInfo($validated['name']);
 
         if ($request->hasFile('profile_photo')) {
             if ($student->profile_photo) {
@@ -252,10 +270,11 @@ class StudentController extends Controller
                 'student_id' => $student->id,
                 'student_name' => $student->name,
                 'status' => $status['status'],
+                'is_registered' => $status['status'] === 'registered',
                 'message' => $status['message']
             ]);
         } catch (\Exception $e) {
-            \Log::error('Failed to get face status', [
+            Log::error('Failed to get face status', [
                 'student_id' => $student->id,
                 'error' => $e->getMessage()
             ]);
@@ -266,6 +285,34 @@ class StudentController extends Controller
                 'message' => 'Failed to check face status'
             ], 500);
         }
+    }
+
+    private function ensureNameExistsInModelInfo(string $studentName): void
+    {
+        $registeredClasses = $this->getRegisteredClasses();
+
+        if (empty($registeredClasses)) {
+            throw ValidationException::withMessages([
+                'name' => 'Nama tidak dapat diverifikasi karena model-info dari Flask API tidak tersedia.',
+            ]);
+        }
+
+        $normalizedInput = $this->normalizeModelName($studentName);
+        $allowedNames = collect($registeredClasses)
+            ->map(fn($name) => $this->normalizeModelName((string) $name))
+            ->filter()
+            ->values();
+
+        if (!$allowedNames->contains($normalizedInput)) {
+            throw ValidationException::withMessages([
+                'name' => 'Nama mahasiswa harus berasal dari daftar model-info (hasil training wajah).',
+            ]);
+        }
+    }
+
+    private function normalizeModelName(string $name): string
+    {
+        return strtolower(trim(preg_replace('/\s+/', ' ', $name)));
     }
 
     /**
@@ -365,18 +412,18 @@ class StudentController extends Controller
         try {
             $registeredClasses = $this->getRegisteredClasses();
             $students = Student::select(['id', 'name'])->get();
-            
+
             $studentsWithStatus = $students->map(function ($student) use ($registeredClasses) {
                 $normalizedStudentName = strtolower(trim($student->name));
                 $isRegistered = false;
-                
+
                 foreach ($registeredClasses as $className) {
                     if (strtolower(trim($className)) === $normalizedStudentName) {
                         $isRegistered = true;
                         break;
                     }
                 }
-                
+
                 return [
                     'id' => $student->id,
                     'name' => $student->name,
@@ -384,20 +431,19 @@ class StudentController extends Controller
                     'message' => $isRegistered ? 'Face registered in model' : 'Face not registered'
                 ];
             });
-            
+
             return response()->json([
                 'success' => true,
                 'students' => $studentsWithStatus,
                 'total_registered_classes' => count($registeredClasses),
                 'api_status' => 'connected'
             ]);
-            
         } catch (\Exception $e) {
             Log::error('Error getting students face status', [
                 'error' => $e->getMessage(),
                 'api_url' => $this->apiUrl
             ]);
-            
+
             // Return all students with API error status
             $students = Student::select(['id', 'name'])->get();
             $studentsWithStatus = $students->map(function ($student) {
@@ -408,7 +454,7 @@ class StudentController extends Controller
                     'message' => 'Unable to check face registration status'
                 ];
             });
-            
+
             return response()->json([
                 'success' => false,
                 'students' => $studentsWithStatus,

@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 
 use App\Models\ClassModel;
 use App\Models\Attendance;
+use App\Models\Setting;
 use App\Services\FaceRecognitionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
@@ -31,8 +33,13 @@ class AttendanceController extends Controller
         $activeSession = \App\Models\AttendanceSession::where('class_id', $class->id)
             ->where('status', 'active')
             ->first();
-            
-        return view('attendance.scanner', compact('class', 'apiHealth', 'activeSession'));
+
+        $confidenceThreshold = (float) Setting::getValue(
+            'face_similarity_threshold',
+            config('app.face_similarity_threshold', 0.5)
+        );
+
+        return view('attendance.scanner', compact('class', 'apiHealth', 'activeSession', 'confidenceThreshold'));
     }
 
     public function markAttendance(Request $request)
@@ -83,7 +90,7 @@ class AttendanceController extends Controller
         $session = \App\Models\AttendanceSession::create([
             'class_id' => $validated['class_id'],
             'status' => 'active',
-            'created_by' => auth()->id()
+            'created_by' => Auth::id()
         ]);
 
         return response()->json(['success' => true, 'session_id' => $session->id]);

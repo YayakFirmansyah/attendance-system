@@ -10,6 +10,8 @@ use App\Enums\AttendanceStatus;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
+use App\Models\ClassEnrollment;
 
 class AttendanceService
 {
@@ -55,9 +57,8 @@ class AttendanceService
 
             $studentId = $student->id;
 
-            // Cek Enrollment via Cohort
             $classModel = \App\Models\ClassModel::find($session->class_id);
-            $isEnrolled = $classModel && $student->cohort_id === $classModel->cohort_id;
+            $isEnrolled = $classModel && $this->isStudentEnrolledInClass($studentId, $classModel);
 
             if (!$isEnrolled) {
                 $results[] = [
@@ -127,10 +128,7 @@ class AttendanceService
                 return;
             }
 
-            $enrolledStudentIds = \App\Models\Student::where('cohort_id', $classModel->cohort_id)
-                ->where('status', 'active')
-                ->pluck('id')
-                ->toArray();
+            $enrolledStudentIds = $this->getEnrolledStudentIds($classModel);
 
             $attendedStudentIds = Attendance::where('attendance_session_id', $session->id)
                 ->pluck('student_id')
@@ -163,6 +161,42 @@ class AttendanceService
         }
     }
 
+    private function isStudentEnrolledInClass(int $studentId, ClassModel $classModel): bool
+    {
+        $hasEnrollment = ClassEnrollment::where('class_id', $classModel->id)
+            ->where('status', 'active')
+            ->exists();
+
+        if ($hasEnrollment) {
+            return ClassEnrollment::where('class_id', $classModel->id)
+                ->where('student_id', $studentId)
+                ->where('status', 'active')
+                ->exists();
+        }
+
+        // Fallback for legacy data where enrollments were never seeded.
+        return Student::where('id', $studentId)
+            ->where('cohort_id', $classModel->cohort_id)
+            ->where('status', 'active')
+            ->exists();
+    }
+
+    private function getEnrolledStudentIds(ClassModel $classModel): array
+    {
+        $enrollmentQuery = ClassEnrollment::where('class_id', $classModel->id)
+            ->where('status', 'active');
+
+        if ($enrollmentQuery->exists()) {
+            return $enrollmentQuery->pluck('student_id')->toArray();
+        }
+
+        // Fallback for legacy data where enrollments were never seeded.
+        return Student::where('cohort_id', $classModel->cohort_id)
+            ->where('status', 'active')
+            ->pluck('id')
+            ->toArray();
+    }
+
     /**
      * Record manual attendance entry
      */
@@ -178,7 +212,7 @@ class AttendanceService
 
             // Set manual flag
             $data['is_manual'] = true;
-            $data['recorded_by'] = auth()->id();
+            $data['recorded_by'] = Auth::id();
 
             // Create attendance record
             $attendance = Attendance::create($data);
@@ -190,7 +224,7 @@ class AttendanceService
                 'timestamp' => now(),
                 'confidence_score' => 1.0, // Manual entry = 100% confidence
                 'is_verified' => true,
-                'device_info' => 'Manual Entry by ' . auth()->user()->name,
+                'device_info' => 'Manual Entry by ' . (Auth::user()?->name ?? 'Unknown User'),
             ]);
 
             DB::commit();
@@ -219,7 +253,7 @@ class AttendanceService
             }
 
             // Update recorded_by
-            $data['updated_by'] = auth()->id();
+            $data['updated_by'] = Auth::id();
 
             // Update attendance
             $attendance->update($data);
@@ -241,7 +275,7 @@ class AttendanceService
             ->update([
                 'status' => $status,
                 'notes' => $notes,
-                'updated_by' => auth()->id(),
+                'updated_by' => Auth::id(),
                 'updated_at' => now(),
             ]);
     }

@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 class Student extends Model
 {
@@ -15,18 +16,17 @@ class Student extends Model
         'student_id',
         'name',
         'email',
-        'program_study',
-        'faculty',
-        'semester',
         'phone',
         'status',
         'profile_photo',
-        'cohort_id'
+        'cohort_id',
+        'face_encoding_count',
+        'verification_migrated',
     ];
 
     protected $casts = [
         'status' => 'string',
-        'semester' => 'integer',
+        'verification_migrated' => 'boolean',
     ];
 
     protected $attributes = [
@@ -96,7 +96,7 @@ class Student extends Model
         return Cache::remember("student_face_registered_{$this->id}", 300, function () {
             try {
                 $apiUrl = config('app.python_api_url', 'http://localhost:5000');
-                $response = \Http::timeout(2)->get($apiUrl . '/api/model-info');
+                $response = Http::timeout(2)->get($apiUrl . '/api/model-info');
 
                 if ($response->successful()) {
                     $data = $response->json();
@@ -174,12 +174,31 @@ class Student extends Model
 
     public function scopeBySemester($query, $semester)
     {
-        return $query->where('semester', $semester);
+        return $query->whereHas('cohort', function ($cohortQuery) use ($semester) {
+            $cohortQuery->where('semester', $semester);
+        });
     }
 
     public function scopeByProgram($query, $program)
     {
-        return $query->where('program_study', $program);
+        return $query->whereHas('cohort', function ($cohortQuery) use ($program) {
+            $cohortQuery->where('program_studi', $program);
+        });
+    }
+
+    public function getProgramStudyAttribute()
+    {
+        return $this->cohort?->program_studi;
+    }
+
+    public function getFacultyAttribute()
+    {
+        return $this->cohort?->fakultas;
+    }
+
+    public function getSemesterAttribute()
+    {
+        return $this->cohort?->semester;
     }
 
     public function getTodayAttendances()

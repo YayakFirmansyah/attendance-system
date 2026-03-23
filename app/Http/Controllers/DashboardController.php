@@ -9,17 +9,16 @@ use App\Models\Attendance;
 use App\Models\AttendanceLog;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $user = auth()->user();
-        
-        if ($user->isAdmin()) {
+        $user = Auth::user();
+
+        if ($user && $user->role === 'admin') {
             return $this->adminDashboard();
         } else {
             return $this->dosenDashboard();
@@ -31,13 +30,19 @@ class DashboardController extends Controller
         Carbon::setLocale('id');
         $now = Carbon::now('Asia/Jakarta');
         $today = $now->toDateString();
-        
+
         // Admin Statistics
         $totalStudents = Student::where('status', 'active')->count();
         $totalUsers = User::where('status', 'active')->count();
         $totalClasses = ClassModel::where('status', 'active')->count();
         $todayAttendances = Attendance::whereDate('date', $today)->count();
         $todayLogs = AttendanceLog::whereDate('timestamp', $today)->count() ?? 0;
+
+        $todayAttendanceList = Attendance::with(['student:id,name', 'classModel.course:id,course_name'])
+            ->whereDate('date', $today)
+            ->orderByDesc('check_in')
+            ->limit(50)
+            ->get();
 
         // Recent activity
         $recentLogs = AttendanceLog::with(['student', 'classModel.course'])
@@ -60,12 +65,12 @@ class DashboardController extends Controller
             $attendanceCount = Attendance::where('class_id', $class->id)
                 ->whereDate('date', $today)
                 ->count();
-                
+
             $classAttendanceStats[] = [
                 'class' => $class,
                 'attendance_count' => $attendanceCount,
                 'capacity' => $class->capacity ?? 0,
-                'percentage' => isset($class->capacity) && $class->capacity > 0 ? 
+                'percentage' => isset($class->capacity) && $class->capacity > 0 ?
                     round(($attendanceCount / $class->capacity) * 100, 1) : 0
             ];
         }
@@ -73,8 +78,9 @@ class DashboardController extends Controller
         return view('dashboard.admin', compact(
             'totalStudents',
             'totalUsers',
-            'totalClasses', 
+            'totalClasses',
             'todayAttendances',
+            'todayAttendanceList',
             'todayLogs',
             'recentLogs',
             'todayClasses',
@@ -88,27 +94,46 @@ class DashboardController extends Controller
         Carbon::setLocale('id');
         $now = Carbon::now('Asia/Jakarta');
         $today = $now->toDateString();
-        
-        $todayAttendances = Attendance::whereDate('date', $today)->count();
-        $todayLogs = AttendanceLog::whereDate('timestamp', $today)->count() ?? 0;
-
-        // FIXED: Today's classes dengan proper eager loading
+        $dosenId = Auth::id();
         $currentDay = strtolower($now->format('l'));
+
         $todayClasses = ClassModel::with(['course', 'room'])
             ->where('status', 'active')
             ->where('day', $currentDay)
+            ->whereHas('course', function ($query) use ($dosenId) {
+                $query->where('lecturer_id', $dosenId);
+            })
             ->orderBy('start_time')
+            ->get();
+
+        $todayClassIds = $todayClasses->pluck('id');
+
+        $todayAttendances = Attendance::whereDate('date', $today)
+            ->whereIn('class_id', $todayClassIds)
+            ->count();
+
+        $todayLogs = AttendanceLog::whereDate('timestamp', $today)
+            ->whereIn('class_id', $todayClassIds)
+            ->count() ?? 0;
+
+        $todayAttendanceList = Attendance::with(['student:id,name', 'classModel.course:id,course_name'])
+            ->whereDate('date', $today)
+            ->whereIn('class_id', $todayClassIds)
+            ->orderByDesc('check_in')
+            ->limit(50)
             ->get();
 
         // Recent activity from classes
         $recentLogs = AttendanceLog::with(['student', 'classModel.course'])
             ->whereDate('timestamp', $today)
+            ->whereIn('class_id', $todayClassIds)
             ->orderBy('timestamp', 'desc')
             ->limit(5)
             ->get() ?? collect();
 
         return view('dashboard.dosen', compact(
             'todayAttendances',
+            'todayAttendanceList',
             'todayLogs',
             'todayClasses',
             'recentLogs',
@@ -120,9 +145,9 @@ class DashboardController extends Controller
     {
         try {
             $apiUrl = config('app.python_api_url', 'http://localhost:5000');
-            
+
             $response = Http::timeout(5)->get($apiUrl . '/api/health');
-            
+
             if ($response->successful()) {
                 return response()->json([
                     'status' => 'connected',

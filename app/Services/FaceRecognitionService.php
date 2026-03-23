@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Log;
 use App\Models\Student;
 use App\Models\Attendance;
 use App\Models\AttendanceLog;
+use App\Models\ClassEnrollment;
+use App\Models\ClassModel;
+use App\Models\Setting;
 use Carbon\Carbon;
 
 class FaceRecognitionService
@@ -19,7 +22,10 @@ class FaceRecognitionService
     public function __construct()
     {
         $this->apiUrl = config('app.python_api_url', 'http://localhost:5000');
-        $this->similarityThreshold = config('app.face_similarity_threshold', 0.5); // Default 50%
+        $this->similarityThreshold = (float) Setting::getValue(
+            'face_similarity_threshold',
+            config('app.face_similarity_threshold', 0.5)
+        );
     }
 
     public function checkApiHealth()
@@ -197,11 +203,20 @@ class FaceRecognitionService
 
             if (!$student) continue;
 
-            // Check if student is actually enrolled in this class
-            $isEnrolled = \App\Models\ClassEnrollment::where('class_id', $classId)
-                ->where('student_id', $student->id)
+            // Check if student is actually enrolled in this class.
+            $hasEnrollmentData = ClassEnrollment::where('class_id', $classId)
                 ->where('status', 'active')
                 ->exists();
+
+            if ($hasEnrollmentData) {
+                $isEnrolled = ClassEnrollment::where('class_id', $classId)
+                    ->where('student_id', $student->id)
+                    ->where('status', 'active')
+                    ->exists();
+            } else {
+                $classModel = ClassModel::find($classId);
+                $isEnrolled = $classModel && $student->cohort_id === $classModel->cohort_id;
+            }
 
             if (!$isEnrolled) {
                 // Record them as recognized but not enrolled for feedback

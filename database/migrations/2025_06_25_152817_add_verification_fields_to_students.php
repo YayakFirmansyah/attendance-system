@@ -23,7 +23,13 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('students', function (Blueprint $table) {
-            //
+            if (Schema::hasColumn('students', 'face_encoding_count')) {
+                $table->dropColumn('face_encoding_count');
+            }
+
+            if (Schema::hasColumn('students', 'verification_migrated')) {
+                $table->dropColumn('verification_migrated');
+            }
         });
     }
 };

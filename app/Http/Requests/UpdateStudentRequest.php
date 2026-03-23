@@ -26,11 +26,9 @@ class UpdateStudentRequest extends FormRequest
             'student_id' => ['required', 'string', 'max:50', Rule::unique('students', 'student_id')->ignore($studentId)],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('students', 'email')->ignore($studentId)],
-            'program_study' => ['required', 'string', 'max:255'],
-            'faculty' => ['required', 'string', 'max:255'],
-            'semester' => ['required', 'integer', 'min:1', 'max:14'],
+            'cohort_id' => ['required', 'exists:cohorts,id'],
             'phone' => ['nullable', 'string', 'max:20'],
-            'status' => ['required', 'in:active,inactive'],
+            'status' => ['required', 'in:active,inactive,graduated'],
             'profile_photo' => ['nullable', 'image', 'max:2048', 'mimes:jpeg,jpg,png'],
         ];
     }
@@ -42,9 +40,7 @@ class UpdateStudentRequest extends FormRequest
     {
         return [
             'student_id' => 'NIM/Student ID',
-            'program_study' => 'program studi',
-            'faculty' => 'fakultas',
-            'semester' => 'semester',
+            'cohort_id' => 'cohort',
             'profile_photo' => 'foto profil',
         ];
     }
@@ -61,8 +57,7 @@ class UpdateStudentRequest extends FormRequest
             'email.required' => 'Email wajib diisi.',
             'email.email' => 'Format email tidak valid.',
             'email.unique' => 'Email sudah terdaftar.',
-            'semester.min' => 'Semester minimal 1.',
-            'semester.max' => 'Semester maksimal 14.',
+            'cohort_id.required' => 'Cohort wajib dipilih.',
             'profile_photo.image' => 'File harus berupa gambar.',
             'profile_photo.max' => 'Ukuran foto maksimal 2MB.',
         ];

@@ -14,14 +14,15 @@ class ClassModel extends Model
 
     protected $fillable = [
         'course_id',
-        'room_id',      // PERBAIKAN: gunakan room_id
-        'class_code',
-        'semester',     // TAMBAHAN: semester field
+        'room_id',
+        'capacity',
         'day',
         'start_time',
         'end_time',
         'status',
-        'cohort_id'
+        'cohort_id',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [
@@ -57,14 +58,15 @@ class ClassModel extends Model
 
     public function enrollments()
     {
-        // Deprecated, returned for compatibility if any code still calls it
         return $this->hasMany(ClassEnrollment::class, 'class_id');
     }
 
     public function students()
     {
-        // Returns query builder for students in this cohort
-        return \App\Models\Student::where('cohort_id', $this->cohort_id);
+        return $this->belongsToMany(Student::class, 'class_enrollments', 'class_id', 'student_id')
+            ->withPivot('enrolled_at', 'status', 'notes')
+            ->wherePivot('status', 'active')
+            ->withTimestamps();
     }
 
     public function activeEnrollments()
@@ -86,7 +88,9 @@ class ClassModel extends Model
 
     public function scopeBySemester($query, $semester)
     {
-        return $query->where('semester', $semester);
+        return $query->whereHas('cohort', function ($cohortQuery) use ($semester) {
+            $cohortQuery->where('semester', $semester);
+        });
     }
 
     // Accessors
@@ -98,8 +102,9 @@ class ClassModel extends Model
     public function getFullClassNameAttribute()
     {
         $courseName = $this->course->course_name ?? 'Unknown Course';
-        $classCode = $this->class_code ? ' - ' . $this->class_code : '';
-        return $courseName . $classCode;
+        $cohortName = $this->cohort->name ?? 'Unknown Cohort';
+
+        return $courseName . ' - ' . $cohortName;
     }
 
     public function getRoomNameAttribute()

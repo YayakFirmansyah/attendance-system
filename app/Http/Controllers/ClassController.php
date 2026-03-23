@@ -16,7 +16,7 @@ class ClassController extends Controller
             ->orderBy('day')
             ->orderBy('start_time')
             ->paginate(10);
-        
+
         return view('classes.index', compact('classes'));
     }
 
@@ -26,10 +26,10 @@ class ClassController extends Controller
             ->with('lecturer')
             ->whereNotNull('lecturer_id')
             ->get();
-        
+
         $rooms = Room::where('status', 'active')->get();
         $cohorts = \App\Models\Cohort::orderBy('name')->get();
-        
+
         return view('classes.create', compact('courses', 'rooms', 'cohorts'));
     }
 
@@ -57,20 +57,19 @@ class ClassController extends Controller
         // Check for room schedule conflicts on same day and time
         $conflict = ClassModel::where('room_id', $validated['room_id'])
             ->where('day', $validated['day'])
-            ->where('cohort_id', $validated['cohort_id'])
             ->where('status', 'active')
-            ->where(function($query) use ($validated) {
+            ->where(function ($query) use ($validated) {
                 $query->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
-                      ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']])
-                      ->orWhere(function($q) use ($validated) {
-                          $q->where('start_time', '<=', $validated['start_time'])
+                    ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']])
+                    ->orWhere(function ($q) use ($validated) {
+                        $q->where('start_time', '<=', $validated['start_time'])
                             ->where('end_time', '>=', $validated['end_time']);
-                      });
+                    });
             })
             ->exists();
 
         if ($conflict) {
-            return back()->withErrors(['error' => 'Room schedule conflict detected for this time and cohort']);
+            return back()->withErrors(['error' => 'Room schedule conflict detected for this time range']);
         }
 
         ClassModel::create($validated);
@@ -89,10 +88,10 @@ class ClassController extends Controller
             ->with('lecturer')
             ->whereNotNull('lecturer_id')
             ->get();
-        
+
         $rooms = \App\Models\Room::where('status', 'active')->get();
         $cohorts = \App\Models\Cohort::orderBy('name')->get();
-        
+
         return view('classes.edit', compact('class', 'courses', 'rooms', 'cohorts'));
     }
 
@@ -121,21 +120,20 @@ class ClassController extends Controller
         // Check for room schedule conflicts (exclude current class)
         $conflict = ClassModel::where('room_id', $validated['room_id'])
             ->where('day', $validated['day'])
-            ->where('cohort_id', $validated['cohort_id'])
             ->where('status', 'active')
             ->where('id', '!=', $class->id)
-            ->where(function($query) use ($validated) {
+            ->where(function ($query) use ($validated) {
                 $query->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
-                      ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']])
-                      ->orWhere(function($q) use ($validated) {
-                          $q->where('start_time', '<=', $validated['start_time'])
+                    ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']])
+                    ->orWhere(function ($q) use ($validated) {
+                        $q->where('start_time', '<=', $validated['start_time'])
                             ->where('end_time', '>=', $validated['end_time']);
-                      });
+                    });
             })
             ->exists();
 
         if ($conflict) {
-            return back()->withErrors(['error' => 'Room schedule conflict detected for this time and cohort']);
+            return back()->withErrors(['error' => 'Room schedule conflict detected for this time range']);
         }
 
         $class->update($validated);

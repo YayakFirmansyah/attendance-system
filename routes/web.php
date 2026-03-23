@@ -12,6 +12,7 @@ use App\Http\Controllers\CourseController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\ClassController;
 use App\Http\Controllers\CohortController;
+use App\Http\Controllers\SettingController;
 
 // AUTH ROUTES
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -48,6 +49,8 @@ Route::middleware(['auth'])->group(function () {
 
         // Cohorts management
         Route::resource('cohorts', CohortController::class);
+        Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
         Route::get('students/{student}/faces', [StudentController::class, 'manageFaces'])->name('students.faces');
         Route::post('students/{student}/faces', [StudentController::class, 'uploadFaces'])->name('students.upload-faces');
     });

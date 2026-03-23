@@ -14,6 +14,10 @@ class CourseSeeder extends Seeder
         $lecturerId = User::where('email', 'dosen@presensi.com')->value('id')
             ?? User::where('role', 'dosen')->orderBy('id')->value('id');
 
+        if (!$lecturerId) {
+            $this->command->warn('CourseSeeder: no dosen user found, courses will be created without lecturer assignment.');
+        }
+
         $courses = [
             [
                 'course_code' => 'TIF001',
