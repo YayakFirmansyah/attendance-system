@@ -97,8 +97,9 @@
         </div>
 
         <div class="row">
-            <div class="col-12">
-                <div class="card">
+            <!-- Presensi Hari Ini -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">
                             <i class="fas fa-clipboard-list"></i>
@@ -106,7 +107,7 @@
                         </h5>
                         <span class="badge bg-info">{{ $todayAttendances }} data</span>
                     </div>
-                    <div class="card-body" style="max-height: 280px; overflow-y: auto;">
+                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
                         @if ($todayAttendanceList->count() > 0)
                             @foreach ($todayAttendanceList as $attendance)
                                 <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
@@ -138,8 +139,8 @@
             </div>
 
             <!-- Today's Classes -->
-            <div class="col-md-6">
-                <div class="card">
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">
                             <i class="fas fa-calendar-day"></i>
@@ -147,13 +148,16 @@
                         </h5>
                         <small class="text-muted">{{ $now->format('l, d M Y') }}</small>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
                         @if ($todayClasses->count() > 0)
                             @foreach ($todayClasses as $class)
                                 <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
                                     <div>
                                         <strong>{{ $class->course->course_name }}</strong><br>
+                                        <span class="badge bg-secondary mb-1">{{ $class->cohort->name ?? 'Unknown Class' }}</span><br>
                                         <small class="text-muted">
+                                            <i class="fas fa-user-tie"></i>
+                                            {{ $class->course->lecturer->name ?? 'Unknown Lecturer' }}<br>
                                             <i class="fas fa-door-open"></i>
                                             {{ $class->room ? $class->room->room_code . ' - ' . $class->room->room_name : 'No Room' }}<br>
                                             <i class="fas fa-clock"></i>
@@ -162,7 +166,7 @@
                                         </small>
                                     </div>
                                     <div>
-                                        <a href="{{ route('attendance.scanner', $class) }}" class="btn btn-sm btn-primary">
+                                        <a href="{{ route('attendance.scanner', $class) }}" class="btn btn-sm btn-primary d-none">
                                             <i class="fas fa-camera"></i> Scan
                                         </a>
                                     </div>
@@ -179,8 +183,8 @@
             </div>
 
             <!-- Recent Activity -->
-            <div class="col-md-6">
-                <div class="card">
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
                     <div class="card-header">
                         <h5 class="card-title mb-0">
                             <i class="fas fa-history"></i>
@@ -219,23 +223,21 @@
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Class Attendance Statistics -->
-        @if ($classAttendanceStats && count($classAttendanceStats) > 0)
-            <div class="row mt-4">
-                <div class="col-12">
-                    <div class="card">
+            <!-- Class Attendance Statistics -->
+            @if ($classAttendanceStats && count($classAttendanceStats) > 0)
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
                         <div class="card-header">
                             <h5 class="card-title mb-0">
                                 <i class="fas fa-chart-bar"></i>
                                 Statistik Presensi Kelas Hari Ini
                             </h5>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
                             <div class="row">
                                 @foreach ($classAttendanceStats as $stat)
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-12 mb-3">
                                         <div class="card border-left-primary">
                                             <div class="card-body">
                                                 <h6 class="card-title">{{ $stat['class']->course->course_name }}</h6>
@@ -264,7 +266,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
-        @endif
+            @endif
+        </div>
     </div>
 @endsection

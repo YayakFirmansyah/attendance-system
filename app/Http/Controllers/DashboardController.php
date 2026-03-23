@@ -53,7 +53,7 @@ class DashboardController extends Controller
 
         // FIXED: Today's classes dengan proper eager loading
         $currentDay = strtolower($now->format('l'));
-        $todayClasses = ClassModel::with(['course', 'room'])
+        $todayClasses = ClassModel::with(['course.lecturer', 'room', 'cohort'])
             ->where('status', 'active')
             ->where('day', $currentDay)
             ->orderBy('start_time')
@@ -97,7 +97,7 @@ class DashboardController extends Controller
         $dosenId = Auth::id();
         $currentDay = strtolower($now->format('l'));
 
-        $todayClasses = ClassModel::with(['course', 'room'])
+        $todayClasses = ClassModel::with(['course', 'room', 'cohort'])
             ->where('status', 'active')
             ->where('day', $currentDay)
             ->whereHas('course', function ($query) use ($dosenId) {
