@@ -24,17 +24,24 @@ class StudentSeeder extends Seeder
             "214100045_yudas", "214100046_zanuar", "214100047_zidan"
         ];
 
+        $cohort1 = \App\Models\Cohort::where('kelas', 'A')->first()->id;
+        $cohort2 = \App\Models\Cohort::where('kelas', 'B')->first()->id;
+
         foreach ($data as $index => $item) {
             [$student_id, $name] = explode('_', $item);
-            Student::create([
-                'student_id' => $student_id,
-                'name' => ucfirst($name),
-                'email' => strtolower($name) . '@student.univ.ac.id',
-                'program_study' => 'Teknik Informatika',
-                'faculty' => 'Fakultas Teknik',
-                'semester' => 6,
-                'phone' => '08' . str_pad((string)(123450000 + $index + 1), 9, '0', STR_PAD_LEFT)
-            ]);
+            
+            // Bagi siswa ke dua cohort berbeda
+            $cohort_id = ($index % 2 == 0) ? $cohort1 : $cohort2;
+
+            Student::updateOrCreate(
+                ['student_id' => $student_id],
+                [
+                    'name' => ucfirst($name),
+                    'email' => strtolower($name) . '@student.univ.ac.id',
+                    'cohort_id' => $cohort_id,
+                    'phone' => '08' . str_pad((string)(123450000 + $index + 1), 9, '0', STR_PAD_LEFT)
+                ]
+            );
         }
     }
 }

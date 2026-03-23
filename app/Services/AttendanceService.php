@@ -13,6 +13,156 @@ use Illuminate\Support\Facades\Storage;
 
 class AttendanceService
 {
+    public function recordAttendance(int $sessionId, array $students): array
+    {
+        $session = \App\Models\AttendanceSession::findOrFail($sessionId);
+        if ($session->status !== 'active') {
+            throw new \Exception('Sesi absensi sudah ditutup.');
+        }
+
+        $results = [];
+
+        foreach ($students as $studentData) {
+            $studentName = $studentData['student_name'];
+            $confidence = $studentData['confidence'];
+
+            // Cek Student berdasarkan name
+            $student = \App\Models\Student::where('name', $studentName)
+                ->where('status', 'active')
+                ->first();
+
+            if (!$student) {
+                $student = \App\Models\Student::whereRaw('LOWER(name) = ?', [strtolower($studentName)])
+                    ->where('status', 'active')
+                    ->first();
+
+                if (!$student) {
+                    $searchName = str_replace([' ', "'", '"'], '%', $studentName);
+                    $student = \App\Models\Student::where('name', 'LIKE', "%{$searchName}%")
+                        ->where('status', 'active')
+                        ->first();
+                }
+            }
+
+            if (!$student) {
+                $results[] = [
+                    'student_name' => $studentName,
+                    'status' => 'not_found',
+                    'confidence' => $confidence
+                ];
+                continue;
+            }
+
+            $studentId = $student->id;
+
+            // Cek Enrollment via Cohort
+            $classModel = \App\Models\ClassModel::find($session->class_id);
+            $isEnrolled = $classModel && $student->cohort_id === $classModel->cohort_id;
+
+            if (!$isEnrolled) {
+                $results[] = [
+                    'student_name' => $student->name,
+                    'status' => 'not_enrolled',
+                    'confidence' => $confidence
+                ];
+                continue;
+            }
+
+            // Lock row for safe concurrent inserting
+            DB::beginTransaction();
+            try {
+                $attendance = Attendance::where('attendance_session_id', $session->id)
+                    ->where('student_id', $studentId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($attendance) {
+                    $results[] = [
+                        'student_name' => $attendance->student->name,
+                        'status' => 'already_attended',
+                        'confidence' => $confidence
+                    ];
+                } else {
+                    Attendance::create([
+                        'student_id' => $studentId,
+                        'class_id' => $session->class_id,
+                        'attendance_session_id' => $session->id,
+                        'date' => Carbon::today(),
+                        'check_in' => Carbon::now(),
+                        'status' => 'present',
+                        'similarity_score' => $confidence,
+                        'notes' => 'Face recognition verification'
+                    ]);
+
+                    $results[] = [
+                        'student_name' => $student->name,
+                        'status' => 'new_attendance',
+                        'confidence' => $confidence
+                    ];
+                }
+                DB::commit();
+            } catch (\Exception $e) {
+                DB::rollBack();
+                \Illuminate\Support\Facades\Log::error("Failed to record attendance", ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $results;
+    }
+
+    public function autoMarkAbsent(\App\Models\AttendanceSession $session): void
+    {
+        if ($session->status !== 'active') return;
+
+        DB::beginTransaction();
+        try {
+            $session->update([
+                'status' => 'closed',
+                'closed_at' => now(),
+            ]);
+
+            $classModel = \App\Models\ClassModel::find($session->class_id);
+            if (!$classModel) {
+                DB::rollBack();
+                return;
+            }
+
+            $enrolledStudentIds = \App\Models\Student::where('cohort_id', $classModel->cohort_id)
+                ->where('status', 'active')
+                ->pluck('id')
+                ->toArray();
+
+            $attendedStudentIds = Attendance::where('attendance_session_id', $session->id)
+                ->pluck('student_id')
+                ->toArray();
+
+            $absentStudentIds = array_diff($enrolledStudentIds, $attendedStudentIds);
+
+            $absentRecords = [];
+            foreach ($absentStudentIds as $id) {
+                $absentRecords[] = [
+                    'student_id' => $id,
+                    'class_id' => $session->class_id,
+                    'attendance_session_id' => $session->id,
+                    'date' => Carbon::today(),
+                    'status' => 'absent',
+                    'notes' => 'Auto-alpha on session close',
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ];
+            }
+
+            if (!empty($absentRecords)) {
+                Attendance::insert($absentRecords);
+            }
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
     /**
      * Record manual attendance entry
      */

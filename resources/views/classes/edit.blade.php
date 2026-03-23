@@ -46,34 +46,21 @@
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label for="class_code" class="form-label">Class Code</label>
-                                <input type="text" class="form-control @error('class_code') is-invalid @enderror" 
-                                       id="class_code" name="class_code" value="{{ old('class_code', $class->class_code) }}" 
-                                       placeholder="e.g., A, B, 01, 02" required>
-                                @error('class_code')
+                                <label for="cohort_id" class="form-label">Cohort / Rombel</label>
+                                <select class="form-select @error('cohort_id') is-invalid @enderror" id="cohort_id" name="cohort_id" required>
+                                    <option value="">Select Cohort</option>
+                                    @foreach($cohorts as $cohort)
+                                        <option value="{{ $cohort->id }}" {{ old('cohort_id', $class->cohort_id) == $cohort->id ? 'selected' : '' }}>
+                                            {{ $cohort->name }} ({{ $cohort->angkatan }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('cohort_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
-                                <div class="form-text">Kelas berapa (A, B, 01, 02, dll)</div>
+                                <div class="form-text">Pilih angkatan / rombel untuk jadwal ini</div>
                             </div>
                         </div>
-                    </div>
-
-                    {{-- TAMBAHAN SEMESTER FIELD --}}
-                    <div class="mb-3">
-                        <label for="semester" class="form-label">Semester</label>
-                        <select class="form-select @error('semester') is-invalid @enderror" id="semester" name="semester" required>
-                            <option value="">Select Semester</option>
-                            <option value="2023/2024 Ganjil" {{ old('semester', $class->semester) == '2023/2024 Ganjil' ? 'selected' : '' }}>2023/2024 Ganjil</option>
-                            <option value="2023/2024 Genap" {{ old('semester', $class->semester) == '2023/2024 Genap' ? 'selected' : '' }}>2023/2024 Genap</option>
-                            <option value="2024/2025 Ganjil" {{ old('semester', $class->semester) == '2024/2025 Ganjil' ? 'selected' : '' }}>2024/2025 Ganjil</option>
-                            <option value="2024/2025 Genap" {{ old('semester', $class->semester) == '2024/2025 Genap' ? 'selected' : '' }}>2024/2025 Genap</option>
-                            <option value="2025/2026 Ganjil" {{ old('semester', $class->semester) == '2025/2026 Ganjil' ? 'selected' : '' }}>2025/2026 Ganjil</option>
-                            <option value="2025/2026 Genap" {{ old('semester', $class->semester) == '2025/2026 Genap' ? 'selected' : '' }}>2025/2026 Genap</option>
-                        </select>
-                        @error('semester')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                        <div class="form-text">Pilih semester akademik</div>
                     </div>
 
                     <div class="mb-3">
@@ -143,7 +130,7 @@
                                 @error('capacity')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
-                                <div class="form-text">Maximum number of students</div>
+                                <div class="form-text">Optional maximum number of students</div>
                             </div>
                         </div>
                         <div class="col-md-6">

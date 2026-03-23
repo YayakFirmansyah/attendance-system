@@ -21,7 +21,7 @@
                 <thead class="table-light">
                     <tr>
                         <th>Course</th>
-                        <th>Semester</th>
+                        <th>Cohort / Rombel</th>
                         <th>Room</th>
                         <th>Day</th>
                         <th>Time</th>
@@ -36,8 +36,8 @@
                         <td>
                             <div>
                                 <strong>{{ $class->course->course_name }}</strong>
-                                @if($class->class_code)
-                                <span class="badge bg-success ms-1">{{ $class->class_code }}</span>
+                                @if($class->cohort)
+                                <span class="badge bg-success ms-1">{{ $class->cohort->name }}</span>
                                 @endif
                                 <br>
                                 <small class="text-muted">
@@ -47,7 +47,7 @@
                             </div>
                         </td>
                         <td>
-                            <span class="badge bg-info">{{ $class->semester }}</span>
+                            <span class="badge bg-info">{{ $class->cohort ? $class->cohort->name : 'N/A' }}</span>
                         </td>
                         <td>
                             <div>
@@ -76,15 +76,11 @@
                                     class="btn btn-outline-primary" title="Scanner">
                                     <i class="fas fa-camera"></i>
                                 </a>
-                                <a href="{{ route('classes.enrollments', $class) }}"
-                                    class="btn btn-outline-info" title="Kelola Peserta">
-                                    <i class="fas fa-users"></i>
-                                </a>
                                 <a href="{{ route('classes.edit', $class) }}"
                                     class="btn btn-outline-warning" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <button onclick="deleteClass({{ $class->id }}, '{{ $class->course->course_name }} - {{ $class->class_code }}')"
+                                <button onclick="deleteClass({{ $class->id }}, '{{ $class->course->course_name }} - {{ $class->cohort ? $class->cohort->name : '' }}')"
                                     class="btn btn-outline-danger" title="Delete">
                                     <i class="fas fa-trash"></i>
                                 </button>

@@ -342,10 +342,29 @@
                     </span>
                 </div>
             </div>
+            <div id="sessionControlContainer" class="text-end">
+                @if($activeSession)
+                    <button class="btn btn-danger shadow-sm" onclick="closeSession()">
+                        <i class="fas fa-door-closed me-1"></i> Tutup Sesi
+                    </button>
+                    <span class="d-block text-muted small mt-1">Sesi Aktif</span>
+                @else
+                    <button class="btn btn-success shadow-sm" onclick="openSession()">
+                        <i class="fas fa-door-open me-1"></i> Buka Sesi
+                    </button>
+                    <span class="d-block text-muted small mt-1">Belum Dibuka</span>
+                @endif
+            </div>
         </div>
 
         <!-- The Scanner -->
         <div class="scanner-container mb-4" id="scannerWrapper">
+            @if(!$activeSession)
+            <div class="position-absolute w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-dark bg-opacity-75" style="z-index:40;">
+                <h4 class="text-white mb-3"><i class="fas fa-lock me-2"></i>Sesi Belum Dibuka</h4>
+                <button class="btn btn-success btn-lg" onclick="openSession()">Buka Sesi Sekarang</button>
+            </div>
+            @endif
             <video id="videoElement" autoplay playsinline muted></video>
             <canvas id="canvasElement" style="display: none;"></canvas>
 
@@ -478,11 +497,7 @@
             this.autoCapture = true;
             this.autoCaptureInterval = null;
             this.captureIntervalSeconds = 3;
-            this.classId = {
-                {
-                    $class - > id
-                }
-            };
+            this.classId = {{ $class->id }};
 
             // Output Dimensions
             this.outputWidth = 640;
@@ -678,60 +693,101 @@
             document.getElementById('processingOverlay').classList.add('active');
 
             try {
-                const response = await fetch('{{ route("api.attendance.process") }}', {
+                const flaskApiUrl = '{{ env("FACE_RECOGNITION_API_URL", "http://localhost:5000") }}/api/verify-face';
+                
+                // 1. Direct fetch to Flask API
+                const flaskResponse = await fetch(flaskApiUrl, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         image: imageData,
-                        class_id: this.classId,
-                        device_info: 'Browser/Web'
+                        predict_threshold: 0.15,
+                        min_confidence: 0.08,
+                        min_gap: 0.03,
+                        single_class_confidence: 0.10,
+                        class_id: this.classId
                     })
                 });
 
-                const result = await response.json();
+                const result = await flaskResponse.json();
 
                 if (result.success) {
-                    // Update statistics
-                    this.stats.totalFaces += result.total_faces_detected;
-                    this.stats.totalRecognized += result.total_recognized;
-                    this.updateStatistics();
+                    // Update raw detection stats
+                    this.stats.totalFaces += result.total_faces_detected || 0;
+                    
+                    let verifiedStudents = [];
+                    if (result.results && result.results.length > 0) {
+                        verifiedStudents = result.results.filter(s => s.verified === true);
+                    }
 
-                    // Process recognition results
-                    if (result.recognized_students && result.recognized_students.length > 0) {
-                        let newAttendanceCount = 0;
+                    if (verifiedStudents.length > 0) {
+                        const laravelPayload = verifiedStudents.map(s => ({
+                            student_name: s.student_name,
+                            confidence: s.similarity
+                        }));
 
-                        result.recognized_students.forEach(student => {
-                            if (student.status === 'new_attendance') {
-                                this.addLog(`✅ Masuk: ${student.student.name} - ${(student.confidence * 100).toFixed(0)}%`, 'success');
-                                this.stats.totalAttendance++;
-                                newAttendanceCount++;
-                            } else if (student.status === 'already_attended') {
-                                this.addLog(`⚠️ ${student.student.name} sudah absen hari ini`, 'warning');
-                            } else if (student.status === 'not_enrolled') {
-                                this.addLog(`🚫 ${student.student.name} belum terdaftar di kelas (KRS)`, 'danger');
+                        const activeSessionId = {{ $activeSession->id ?? 'null' }};
+                        
+                        if (!activeSessionId) {
+                            this.addLog('⚠️ Sesi absensi belum dibuka.', 'warning');
+                        } else {
+                            // 2. Post recognized students to Laravel
+                            const laravelResponse = await fetch('{{ route("api.attendance.mark") }}', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                    'Accept': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    session_id: activeSessionId,
+                                    students: laravelPayload
+                                })
+                            });
+
+                            const laravelResult = await laravelResponse.json();
+
+                            if (laravelResult.success) {
+                                this.stats.totalRecognized += verifiedStudents.length;
+                                this.updateStatistics();
+
+                                let newAttendanceCount = 0;
+
+                                laravelResult.results.forEach(studentRecord => {
+                                    if (studentRecord.status === 'new_attendance') {
+                                        this.addLog(`✅ Masuk: ${studentRecord.student_name} - ${(studentRecord.confidence * 100).toFixed(0)}%`, 'success');
+                                        this.stats.totalAttendance++;
+                                        newAttendanceCount++;
+                                    } else if (studentRecord.status === 'already_attended') {
+                                        this.addLog(`⚠️ ${studentRecord.student_name} sudah absen di sesi ini`, 'warning');
+                                    } else if (studentRecord.status === 'not_enrolled') {
+                                        this.addLog(`🚫 ${studentRecord.student_name} tidak terdaftar di kelas`, 'danger');
+                                    } else if (studentRecord.status === 'not_found') {
+                                        this.addLog(`❓ ${studentRecord.student_name} tidak ditemukan di database`, 'warning');
+                                    }
+                                });
+
+                                if (newAttendanceCount > 0) {
+                                    this.loadAttendanceData();
+                                }
+                            } else {
+                                console.warn('Laravel returned error:', laravelResult.message);
                             }
-                        });
-
-                        // Refresh attendance list only if there are new attendances
-                        if (newAttendanceCount > 0) {
-                            this.loadAttendanceData();
                         }
                     } else if (result.total_faces_detected > 0) {
-                        this.addLog(`👤 Wajah tidak dikenali (${result.total_faces_detected})`, 'warning');
+                        this.addLog(`👤 Wajah tidak memenuhi threshold (${result.total_faces_detected})`, 'warning');
                     }
 
                     this.updateApiStatus('API Ready', 'success', 'fa-check-circle');
 
                 } else {
-                    console.warn('API returned error:', result.message);
+                    console.warn('Flask API returned error:', result.message);
                 }
 
             } catch (error) {
                 console.error('Processing error:', error);
-                // Dont spam logs if fetch aborts or fails silently
             } finally {
                 this.isProcessing = false;
                 document.getElementById('processingOverlay').classList.remove('active');
@@ -882,5 +938,52 @@
             }
         });
     });
+
+    async function openSession() {
+        if(!confirm('Buka sesi absensi untuk kelas ini?')) return;
+        
+        try {
+            const response = await fetch('{{ route("api.attendance.session.open") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({ class_id: {{ $class->id }} })
+            });
+            const result = await response.json();
+            if(result.success) {
+                location.reload();
+            } else {
+                alert(result.message);
+            }
+        } catch(error) {
+            alert('Error opening session');
+        }
+    }
+
+    async function closeSession() {
+        if(!confirm('Tutup sesi ini? Mahasiswa yang belum absen otomatis menjadi Alpha.')) return;
+        
+        try {
+            const response = await fetch('{{ route("api.attendance.session.close") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({ session_id: {{ $activeSession->id ?? 'null' }} })
+            });
+            const result = await response.json();
+            if(result.success) {
+                alert(result.message);
+                location.reload();
+            } else {
+                alert(result.message);
+            }
+        } catch(error) {
+            alert('Error closing session');
+        }
+    }
 </script>
 @endpush

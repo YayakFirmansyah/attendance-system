@@ -74,21 +74,30 @@ class StudentController extends Controller
 
     public function create()
     {
-        return view('students.create');
+        $registeredClasses = $this->getRegisteredClasses();
+        $existingStudents = \App\Models\Student::pluck('name')->map(function($name) {
+            return strtolower(trim($name));
+        })->toArray();
+
+        $availableNames = collect($registeredClasses)->filter(function($name) use ($existingStudents) {
+            return !in_array(strtolower(trim($name)), $existingStudents);
+        })->values()->all();
+
+        $cohorts = \App\Models\Cohort::all();
+
+        return view('students.create', compact('availableNames', 'cohorts'));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
             'student_id' => 'required|string|unique:students',
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255|unique:students',
             'email' => 'required|email|unique:students',
-            'program_study' => 'required|string|max:255',
-            'faculty' => 'required|string|max:255',
-            'semester' => 'required|integer|min:1|max:8',
             'phone' => 'nullable|string|max:20',
             'status' => 'required|in:active,inactive,graduated',
-            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'cohort_id' => 'required|exists:cohorts,id'
         ]);
 
         if ($request->hasFile('profile_photo')) {
@@ -104,21 +113,20 @@ class StudentController extends Controller
 
     public function edit(Student $student)
     {
-        return view('students.edit', compact('student'));
+        $cohorts = \App\Models\Cohort::all();
+        return view('students.edit', compact('student', 'cohorts'));
     }
 
     public function update(Request $request, Student $student)
     {
         $validated = $request->validate([
             'student_id' => 'required|string|unique:students,student_id,' . $student->id,
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255|unique:students,name,' . $student->id,
             'email' => 'required|email|unique:students,email,' . $student->id,
-            'program_study' => 'required|string|max:255',
-            'faculty' => 'required|string|max:255',
-            'semester' => 'required|integer|min:1|max:8',
             'phone' => 'nullable|string|max:20',
             'status' => 'required|in:active,inactive,graduated',
-            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'cohort_id' => 'required|exists:cohorts,id'
         ]);
 
         if ($request->hasFile('profile_photo')) {

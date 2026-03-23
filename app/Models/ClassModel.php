@@ -20,7 +20,8 @@ class ClassModel extends Model
         'day',
         'start_time',
         'end_time',
-        'status'
+        'status',
+        'cohort_id'
     ];
 
     protected $casts = [
@@ -49,16 +50,21 @@ class ClassModel extends Model
         return $this->hasMany(AttendanceLog::class, 'class_id');
     }
 
+    public function cohort()
+    {
+        return $this->belongsTo(Cohort::class);
+    }
+
     public function enrollments()
     {
+        // Deprecated, returned for compatibility if any code still calls it
         return $this->hasMany(ClassEnrollment::class, 'class_id');
     }
 
     public function students()
     {
-        return $this->belongsToMany(Student::class, 'class_enrollments', 'class_id', 'student_id')
-            ->withPivot('enrolled_at', 'status', 'notes')
-            ->withTimestamps();
+        // Returns query builder for students in this cohort
+        return \App\Models\Student::where('cohort_id', $this->cohort_id);
     }
 
     public function activeEnrollments()

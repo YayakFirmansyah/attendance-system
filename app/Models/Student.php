@@ -20,7 +20,8 @@ class Student extends Model
         'semester',
         'phone',
         'status',
-        'profile_photo'
+        'profile_photo',
+        'cohort_id'
     ];
 
     protected $casts = [
@@ -38,6 +39,11 @@ class Student extends Model
     public function faceEncodings()
     {
         return $this->hasMany(FaceEncoding::class);
+    }
+
+    public function cohort()
+    {
+        return $this->belongsTo(Cohort::class);
     }
 
     public function attendances()

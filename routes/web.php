@@ -11,6 +11,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\ClassController;
+use App\Http\Controllers\CohortController;
 
 // AUTH ROUTES
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -42,6 +43,11 @@ Route::middleware(['auth'])->group(function () {
 
         // Students management
         Route::resource('students', StudentController::class);
+        Route::get('students/{student}/faces', [StudentController::class, 'manageFaces'])->name('students.faces');
+        Route::post('students/{student}/faces', [StudentController::class, 'uploadFaces'])->name('students.upload-faces');
+
+        // Cohorts management
+        Route::resource('cohorts', CohortController::class);
         Route::get('students/{student}/faces', [StudentController::class, 'manageFaces'])->name('students.faces');
         Route::post('students/{student}/faces', [StudentController::class, 'uploadFaces'])->name('students.upload-faces');
     });
@@ -102,7 +108,9 @@ Route::middleware(['auth'])->group(function () {
         // DOSEN ONLY API
         Route::middleware(['role:dosen'])->group(function () {
             // Attendance processing - Dosen only
-            Route::post('attendance/process', [AttendanceController::class, 'processAttendance'])->name('attendance.process');
+            Route::post('attendance/mark', [AttendanceController::class, 'markAttendance'])->name('attendance.mark');
+            Route::post('attendance/session/open', [AttendanceController::class, 'openSession'])->name('attendance.session.open');
+            Route::post('attendance/session/close', [AttendanceController::class, 'closeSession'])->name('attendance.session.close');
             Route::get('attendance/today/{class}', [AttendanceController::class, 'getTodayAttendance'])->name('attendance.today');
             Route::get('attendance/logs/{class}', [AttendanceController::class, 'getAttendanceLogs'])->name('attendance.logs');
         });

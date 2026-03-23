@@ -110,52 +110,17 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="program_study" class="form-label">Program Study <span class="text-danger">*</span></label>
-                                <select class="form-select @error('program_study') is-invalid @enderror"
-                                    id="program_study" name="program_study" required>
-                                    <option value="">Select Program Study</option>
-                                    <option value="Teknik Informatika" {{ old('program_study', $student->program_study) == 'Teknik Informatika' ? 'selected' : '' }}>Teknik Informatika</option>
-                                    <option value="Sistem Informasi" {{ old('program_study', $student->program_study) == 'Sistem Informasi' ? 'selected' : '' }}>Sistem Informasi</option>
-                                    <option value="Teknik Komputer" {{ old('program_study', $student->program_study) == 'Teknik Komputer' ? 'selected' : '' }}>Teknik Komputer</option>
-                                    <option value="Manajemen Informatika" {{ old('program_study', $student->program_study) == 'Manajemen Informatika' ? 'selected' : '' }}>Manajemen Informatika</option>
-                                    <option value="Data Science" {{ old('program_study', $student->program_study) == 'Data Science' ? 'selected' : '' }}>Data Science</option>
-                                </select>
-                                @error('program_study')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="faculty" class="form-label">Faculty <span class="text-danger">*</span></label>
-                                <select class="form-select @error('faculty') is-invalid @enderror"
-                                    id="faculty" name="faculty" required>
-                                    <option value="">Select Faculty</option>
-                                    <option value="Fakultas Teknik" {{ old('faculty', $student->faculty) == 'Fakultas Teknik' ? 'selected' : '' }}>Fakultas Teknik</option>
-                                    <option value="Fakultas Ilmu Komputer" {{ old('faculty', $student->faculty) == 'Fakultas Ilmu Komputer' ? 'selected' : '' }}>Fakultas Ilmu Komputer</option>
-                                    <option value="Fakultas Teknologi Informasi" {{ old('faculty', $student->faculty) == 'Fakultas Teknologi Informasi' ? 'selected' : '' }}>Fakultas Teknologi Informasi</option>
-                                </select>
-                                @error('faculty')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="semester" class="form-label">Current Semester <span class="text-danger">*</span></label>
-                                <select class="form-select @error('semester') is-invalid @enderror"
-                                    id="semester" name="semester" required>
-                                    <option value="">Select Semester</option>
-                                    @for($i = 1; $i <= 8; $i++)
-                                        <option value="{{ $i }}" {{ old('semester', $student->semester) == $i ? 'selected' : '' }}>
-                                        Semester {{ $i }}
+                                <label for="cohort_id" class="form-label">Cohort / Rombel <span class="text-danger">*</span></label>
+                                <select class="form-select @error('cohort_id') is-invalid @enderror"
+                                    id="cohort_id" name="cohort_id" required>
+                                    <option value="">Select Cohort</option>
+                                    @foreach($cohorts as $cohort)
+                                        <option value="{{ $cohort->id }}" {{ old('cohort_id', $student->cohort_id) == $cohort->id ? 'selected' : '' }}>
+                                            {{ $cohort->name }} ({{ $cohort->angkatan }})
                                         </option>
-                                        @endfor
+                                    @endforeach
                                 </select>
-                                @error('semester')
+                                @error('cohort_id')
                                 <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>

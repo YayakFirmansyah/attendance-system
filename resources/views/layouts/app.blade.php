@@ -546,6 +546,13 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('cohorts.*') ? 'active' : '' }}"
+                            href="{{ route('cohorts.index') }}">
+                            <i class="fas fa-layer-group"></i>
+                            Cohorts
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('students.*') ? 'active' : '' }}"
                             href="{{ route('students.index') }}">
                             <i class="fas fa-users"></i>

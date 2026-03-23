@@ -5,106 +5,176 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Sistem Presensi</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
             min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-wrapper {
+            width: 100%;
+            max-width: 420px;
+            padding: 2rem;
         }
         .login-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            padding: 2.5rem 2.25rem;
+            border: 1px solid rgba(229, 231, 235, 0.5);
         }
-        .logo-section {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            border-radius: 15px 15px 0 0;
+        .brand-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #10b981, #059669);
             color: white;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
         }
-        @media (min-width: 768px) {
-            .logo-section {
-                border-radius: 15px 0 0 15px;
-            }
+        h4.auth-title {
+            font-weight: 700;
+            color: #111827;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+        p.auth-subtitle {
+            color: #6b7280;
+            text-align: center;
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+        }
+        .form-control, .form-control:focus {
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 0.8rem 1rem;
+            font-size: 0.95rem;
+            color: #111827;
+            box-shadow: none;
+            transition: all 0.2s;
+        }
+        .form-control:focus {
+            background-color: #ffffff;
+            border-color: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+        }
+        .form-label {
+            font-weight: 500;
+            color: #374151;
+            font-size: 0.9rem;
+            margin-bottom: 0.4rem;
+        }
+        .btn-primary {
+            background: #10b981;
+            border: none;
+            border-radius: 12px;
+            padding: 0.8rem 1rem;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
+        }
+        .btn-primary:hover, .btn-primary:focus {
+            background: #059669;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px -1px rgba(16, 185, 129, 0.3);
+        }
+        .form-check-input:checked {
+            background-color: #10b981;
+            border-color: #10b981;
+        }
+        .form-check-label {
+            font-size: 0.9rem;
+            color: #4b5563;
+        }
+        .alert {
+            border-radius: 12px;
+            font-size: 0.9rem;
+            border: none;
+        }
+        .alert-danger {
+            background-color: #fef2f2;
+            color: #991b1b;
         }
     </style>
 </head>
 <body>
-    <div class="container-fluid vh-100 d-flex align-items-center justify-content-center p-3">
-        <div class="login-card col-12 col-md-8 col-lg-6 col-xl-5">
-            <div class="row g-0 h-100">
-                <!-- Logo Section -->
-                <div class="col-md-5 logo-section d-flex flex-column justify-content-center align-items-center p-4">
-                    <i class="fas fa-user-check fa-4x mb-3"></i>
-                    <h4 class="fw-bold text-center">Sistem Presensi</h4>
-                    <p class="text-center opacity-75 mb-0">Multi-face Recognition</p>
+    <div class="login-wrapper">
+        <div class="login-card">
+            <div class="brand-icon">
+                <i class="fas fa-fingerprint"></i>
+            </div>
+            <h4 class="auth-title">Sistem Presensi</h4>
+            <p class="auth-subtitle">Face Recognition Login</p>
+
+            @if ($errors->any())
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <ul class="mb-0 ps-3">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
+            @endif
+
+            <form method="POST" action="{{ route('login') }}">
+                @csrf
                 
-                <!-- Login Form -->
-                <div class="col-md-7 p-4">
-                    <div class="d-flex flex-column h-100 justify-content-center">
-                        <div class="mb-4">
-                            <h3 class="fw-bold text-dark mb-2">Selamat Datang</h3>
-                            <p class="text-muted">Silakan login untuk melanjutkan</p>
-                        </div>
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email Address</label>
+                    <input type="email" 
+                           class="form-control @error('email') is-invalid @enderror" 
+                           id="email" 
+                           name="email" 
+                           value="{{ old('email') }}" 
+                           placeholder="name@example.com"
+                           required 
+                           autofocus>
+                </div>
 
-                        @if ($errors->any())
-                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                @foreach ($errors->all() as $error)
-                                    {{ $error }}
-                                @endforeach
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-                        @endif
+                <div class="mb-4">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" 
+                           class="form-control @error('password') is-invalid @enderror" 
+                           id="password" 
+                           name="password" 
+                           placeholder="••••••••"
+                           required>
+                </div>
 
-                        <form method="POST" action="{{ route('login') }}">
-                            @csrf
-                            
-                            <div class="mb-3">
-                                <label for="email" class="form-label text-dark fw-semibold">Email</label>
-                                <input type="email" 
-                                       class="form-control form-control-lg @error('email') is-invalid @enderror" 
-                                       id="email" 
-                                       name="email" 
-                                       value="{{ old('email') }}" 
-                                       placeholder="masukkan email"
-                                       required 
-                                       autofocus>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="password" class="form-label text-dark fw-semibold">Password</label>
-                                <input type="password" 
-                                       class="form-control form-control-lg @error('password') is-invalid @enderror" 
-                                       id="password" 
-                                       name="password" 
-                                       placeholder="masukkan password"
-                                       required>
-                            </div>
-
-                            <div class="mb-3 form-check">
-                                <input type="checkbox" class="form-check-input" id="remember" name="remember">
-                                <label class="form-check-label text-muted" for="remember">
-                                    Ingat saya
-                                </label>
-                            </div>
-
-                            <button type="submit" class="btn btn-primary btn-lg w-100 fw-semibold">
-                                Login
-                            </button>
-                        </form>
-
-                        <div class="mt-4 text-center">
-                            <small class="text-muted">
-                                © 2025 Sistem Presensi - Face Recognition
-                            </small>
-                        </div>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                        <label class="form-check-label" for="remember">
+                            Remember me
+                        </label>
                     </div>
                 </div>
+
+                <button type="submit" class="btn btn-primary w-100">
+                    Sign In
+                </button>
+            </form>
+
+            <div class="mt-4 text-center">
+                <small class="text-muted opacity-75">
+                    &copy; {{ date('Y') }} Sistem Presensi.<br>Powered by Multi-face Recognition.
+                </small>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js"></script>
 </body>
 </html>

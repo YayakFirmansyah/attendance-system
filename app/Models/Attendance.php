@@ -13,6 +13,7 @@ class Attendance extends Model
     protected $fillable = [
         'student_id',
         'class_id',
+        'attendance_session_id',
         'date',
         'check_in',
         'check_out',
@@ -43,6 +44,11 @@ class Attendance extends Model
         return $this->hasMany(AttendanceLog::class, 'student_id', 'student_id')
                     ->where('class_id', $this->class_id)
                     ->whereDate('timestamp', $this->date);
+    }
+
+    public function attendanceSession()
+    {
+        return $this->belongsTo(AttendanceSession::class, 'attendance_session_id');
     }
 
     public function isLate()

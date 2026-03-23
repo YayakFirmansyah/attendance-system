@@ -28,65 +28,84 @@ class AttendanceController extends Controller
     public function scanner(ClassModel $class)
     {
         $apiHealth = $this->faceRecognitionService->checkApiHealth();
-        return view('attendance.scanner', compact('class', 'apiHealth'));
+        $activeSession = \App\Models\AttendanceSession::where('class_id', $class->id)
+            ->where('status', 'active')
+            ->first();
+            
+        return view('attendance.scanner', compact('class', 'apiHealth', 'activeSession'));
     }
 
-    public function processAttendance(Request $request)
+    public function markAttendance(Request $request)
     {
         try {
-            // Validate request
             $validated = $request->validate([
-                'image' => 'required|string',
-                'class_id' => 'required|exists:classes,id'
+                'session_id' => 'required|exists:attendance_sessions,id',
+                'students' => 'required|array',
+                'students.*.student_name' => 'required|string',
+                'students.*.confidence' => 'required|numeric'
             ]);
 
-            Log::info('Processing attendance request', [
-                'class_id' => $validated['class_id'],
-                'image_size' => strlen($validated['image']),
-                'user_agent' => $request->header('User-Agent')
-            ]);
-
-            // Process face recognition
-            $result = $this->faceRecognitionService->recognizeFace(
-                $validated['image'],
-                $validated['class_id'],
-                $request->header('User-Agent')
-            );
-
-            // Always return JSON response
-            return response()->json([
-                'success' => $result['success'],
-                'message' => $result['message'] ?? ($result['success'] ? 'Processing completed' : 'Processing failed'),
-                'recognized_students' => $result['recognized_students'] ?? [],
-                'total_faces_detected' => $result['total_faces_detected'] ?? 0,
-                'total_recognized' => $result['total_recognized'] ?? 0,
-                'timestamp' => now()->toISOString()
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::warning('Validation failed', ['errors' => $e->errors()]);
+            $results = app(\App\Services\AttendanceService::class)
+                ->recordAttendance($validated['session_id'], $validated['students']);
 
             return response()->json([
-                'success' => false,
-                'message' => 'Validation failed: ' . collect($e->errors())->flatten()->first(),
-                'recognized_students' => [],
-                'total_faces_detected' => 0,
-                'total_recognized' => 0,
-                'errors' => $e->errors()
-            ], 422);
+                'success' => true,
+                'message' => 'Attendance recorded successfully',
+                'results' => $results
+            ]);
         } catch (\Exception $e) {
-            Log::error('Attendance processing error', [
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
+            Log::error('Attendance marking error', [
+                'error' => $e->getMessage()
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'System error occurred. Please try again.',
-                'recognized_students' => [],
-                'total_faces_detected' => 0,
-                'total_recognized' => 0
+                'results' => []
             ], 500);
+        }
+    }
+
+    public function openSession(Request $request)
+    {
+        $validated = $request->validate([
+            'class_id' => 'required|exists:classes,id'
+        ]);
+
+        $activeSession = \App\Models\AttendanceSession::where('class_id', $validated['class_id'])
+            ->where('status', 'active')
+            ->first();
+
+        if ($activeSession) {
+            return response()->json(['success' => false, 'message' => 'Ada sesi yang masih aktif.']);
+        }
+
+        $session = \App\Models\AttendanceSession::create([
+            'class_id' => $validated['class_id'],
+            'status' => 'active',
+            'created_by' => auth()->id()
+        ]);
+
+        return response()->json(['success' => true, 'session_id' => $session->id]);
+    }
+
+    public function closeSession(Request $request)
+    {
+        $validated = $request->validate([
+            'session_id' => 'required|exists:attendance_sessions,id'
+        ]);
+
+        $session = \App\Models\AttendanceSession::findOrFail($validated['session_id']);
+
+        if ($session->status !== 'active') {
+            return response()->json(['success' => false, 'message' => 'Sesi sudah ditutup.']);
+        }
+
+        try {
+            app(\App\Services\AttendanceService::class)->autoMarkAbsent($session);
+            return response()->json(['success' => true, 'message' => 'Sesi absensi ditutup dan data alpha disimpan.']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Gagal menutup sesi.'], 500);
         }
     }
 
