@@ -83,10 +83,6 @@
                                             <a href="{{ route('attendance.scanner', $class) }}" 
                                                class="btn btn-primary mb-1">
                                                 <i class="fas fa-camera"></i> Mulai Presensi
-                                            </a><br>
-                                            <a href="{{ route('attendance.class', $class) }}" 
-                                               class="btn btn-sm btn-outline-secondary">
-                                                <i class="fas fa-list"></i> Lihat Data
                                             </a>
                                         </div>
                                     </div>

@@ -36,6 +36,9 @@ Route::middleware(['auth'])->group(function () {
 
         // Class schedule management
         Route::resource('classes', ClassController::class);
+        Route::get('classes/{class}/enrollments', [\App\Http\Controllers\ClassEnrollmentController::class, 'manage'])->name('classes.enrollments');
+        Route::post('classes/{class}/enrollments', [\App\Http\Controllers\ClassEnrollmentController::class, 'store'])->name('classes.enrollments.store');
+        Route::delete('classes/{class}/enrollments/{student}', [\App\Http\Controllers\ClassEnrollmentController::class, 'drop'])->name('classes.enrollments.drop');
 
         // Students management
         Route::resource('students', StudentController::class);
@@ -43,47 +46,72 @@ Route::middleware(['auth'])->group(function () {
         Route::post('students/{student}/faces', [StudentController::class, 'uploadFaces'])->name('students.upload-faces');
     });
 
-    // ADMIN & DOSEN ROUTES
-    Route::middleware(['role:admin,dosen'])->group(function () {
-        // Attendance routes
+    // DOSEN ONLY ROUTES - Attendance Management
+    Route::middleware(['role:dosen'])->group(function () {
+        // Attendance scanning - HANYA DOSEN
         Route::prefix('attendance')->name('attendance.')->group(function () {
-            Route::get('/', [AttendanceController::class, 'index'])->name('index');
-            Route::get('/class/{class}', [AttendanceController::class, 'classAttendance'])->name('class');
             Route::get('/scanner/{class}', [AttendanceController::class, 'scanner'])->name('scanner');
-            Route::get('/reports', [AttendanceController::class, 'reports'])->name('reports');
-            Route::post('/generate-report', [AttendanceController::class, 'generateReport'])->name('generate-report');
         });
 
-        // Attendance History routes
+        // Attendance CRUD - HANYA DOSEN
+        Route::prefix('attendance/manage')->name('attendance.')->group(function () {
+            Route::get('/', [AttendanceController::class, 'index'])->name('index');
+            Route::get('/class/{class}', [AttendanceController::class, 'classAttendance'])->name('class');
+            Route::get('/create', [AttendanceController::class, 'create'])->name('create');
+            Route::post('/', [AttendanceController::class, 'store'])->name('store');
+            Route::get('/{attendance}/edit', [AttendanceController::class, 'edit'])->name('edit');
+            Route::put('/{attendance}', [AttendanceController::class, 'update'])->name('update');
+            Route::delete('/{attendance}', [AttendanceController::class, 'destroy'])->name('destroy');
+            Route::post('/bulk-update', [AttendanceController::class, 'bulkUpdate'])->name('bulk-update');
+        });
+    });
+
+    // ADMIN & DOSEN ROUTES - Reports (Read Only for Admin)
+    Route::middleware(['role:admin,dosen'])->group(function () {
+        // Reports - Both can view
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('/', [AttendanceController::class, 'reports'])->name('index');
+            Route::get('/class/{class}', [AttendanceController::class, 'classReport'])->name('class');
+            Route::get('/student/{student}', [AttendanceController::class, 'studentReport'])->name('student');
+            Route::post('/generate', [AttendanceController::class, 'generateReport'])->name('generate');
+            Route::get('/export/{class}', [AttendanceController::class, 'exportReport'])->name('export');
+        });
+
+        // Attendance History - View only for both
         Route::prefix('attendance/history')->name('attendance.history.')->group(function () {
             Route::get('/', [AttendanceHistoryController::class, 'index'])->name('index');
-            Route::get('/create', [AttendanceHistoryController::class, 'create'])->name('create');
-            Route::post('/', [AttendanceHistoryController::class, 'store'])->name('store');
             Route::get('/{attendance}', [AttendanceHistoryController::class, 'show'])->name('show');
-            Route::get('/{attendance}/edit', [AttendanceHistoryController::class, 'edit'])->name('edit');
-            Route::put('/{attendance}', [AttendanceHistoryController::class, 'update'])->name('update');
-            Route::post('/bulk-edit', [AttendanceHistoryController::class, 'bulkEdit'])->name('bulk-edit');
-            Route::get('/reports/generate', [AttendanceHistoryController::class, 'reports'])->name('reports');
         });
     });
 
     // API Routes for AJAX
     Route::prefix('api')->name('api.')->group(function () {
-        // Face Registration API - menggunakan StudentController
-        Route::get('model-info', [StudentController::class, 'getModelInfo'])->name('model-info');
-        Route::get('students/{student}/face-status', [StudentController::class, 'getFaceStatus'])->name('students.face-status');
-        Route::post('refresh-model-cache', [StudentController::class, 'refreshModelCache'])->name('refresh-model-cache');
-
-        // Attendance API routes
-        Route::post('attendance/process', [AttendanceController::class, 'processAttendance'])->name('attendance.process');
-        Route::get('attendance/today/{class}', [AttendanceController::class, 'getTodayAttendance'])->name('attendance.today');
-        Route::get('attendance/logs/{class}', [AttendanceController::class, 'getAttendanceLogs'])->name('attendance.logs');
-
-        // Dashboard status API
+        // Dashboard status API - Both Admin & Dosen
         Route::get('status', [DashboardController::class, 'apiStatus'])->name('status');
 
-        // Student face status API
-        Route::post('students/{student}/refresh-face-status', [StudentController::class, 'refreshFaceStatus'])->name('students.refresh-face-status');
-        Route::get('flask-status', [StudentController::class, 'getApiStatus'])->name('flask-status');
+        // ADMIN ONLY API
+        Route::middleware(['role:admin'])->group(function () {
+            // Face Registration API - Admin only
+            Route::get('model-info', [StudentController::class, 'getModelInfo'])->name('model-info');
+            Route::get('students/{student}/face-status', [StudentController::class, 'getFaceStatus'])->name('students.face-status');
+            Route::post('students/{student}/refresh-face-status', [StudentController::class, 'refreshFaceStatus'])->name('students.refresh-face-status');
+            Route::post('refresh-model-cache', [StudentController::class, 'refreshModelCache'])->name('refresh-model-cache');
+            Route::get('flask-status', [StudentController::class, 'getApiStatus'])->name('flask-status');
+        });
+
+        // DOSEN ONLY API
+        Route::middleware(['role:dosen'])->group(function () {
+            // Attendance processing - Dosen only
+            Route::post('attendance/process', [AttendanceController::class, 'processAttendance'])->name('attendance.process');
+            Route::get('attendance/today/{class}', [AttendanceController::class, 'getTodayAttendance'])->name('attendance.today');
+            Route::get('attendance/logs/{class}', [AttendanceController::class, 'getAttendanceLogs'])->name('attendance.logs');
+        });
+
+        // BOTH ADMIN & DOSEN API
+        Route::middleware(['role:admin,dosen'])->group(function () {
+            // Reports API
+            Route::get('reports/class-statistics/{class}', [AttendanceController::class, 'getClassStatistics'])->name('reports.class-stats');
+            Route::get('reports/student-summary/{student}', [AttendanceController::class, 'getStudentSummary'])->name('reports.student-summary');
+        });
     });
 });

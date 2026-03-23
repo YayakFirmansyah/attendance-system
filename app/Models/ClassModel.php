@@ -49,6 +49,23 @@ class ClassModel extends Model
         return $this->hasMany(AttendanceLog::class, 'class_id');
     }
 
+    public function enrollments()
+    {
+        return $this->hasMany(ClassEnrollment::class, 'class_id');
+    }
+
+    public function students()
+    {
+        return $this->belongsToMany(Student::class, 'class_enrollments', 'class_id', 'student_id')
+            ->withPivot('enrolled_at', 'status', 'notes')
+            ->withTimestamps();
+    }
+
+    public function activeEnrollments()
+    {
+        return $this->hasMany(ClassEnrollment::class, 'class_id')->where('status', 'active');
+    }
+
     // Scopes
     public function scopeActive($query)
     {

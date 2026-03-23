@@ -13,6 +13,7 @@ use Carbon\Carbon;
 class FaceRecognitionService
 {
     private $apiUrl;
+    private $similarityThreshold;
     private $recentDetections = [];
 
     public function __construct()
@@ -25,7 +26,7 @@ class FaceRecognitionService
     {
         try {
             $response = Http::timeout(10)->get($this->apiUrl . '/api/health');
-            
+
             if ($response->successful()) {
                 $data = $response->json();
                 return [
@@ -33,18 +34,17 @@ class FaceRecognitionService
                     'data' => $data
                 ];
             }
-            
+
             return [
                 'status' => 'error',
                 'message' => 'API responded with status: ' . $response->status()
             ];
-            
         } catch (\Exception $e) {
             Log::error('API Health Check Failed', [
                 'error' => $e->getMessage(),
                 'api_url' => $this->apiUrl
             ]);
-            
+
             return [
                 'status' => 'error',
                 'message' => 'API connection failed: ' . $e->getMessage()
@@ -84,13 +84,13 @@ class FaceRecognitionService
                     'response_body' => $response->body(),
                     'error_message' => $errorMsg
                 ]);
-                
+
                 return $this->errorResponse($errorMsg);
             }
 
             // Parse JSON response
             $result = $response->json();
-            
+
             if (!$result || !isset($result['success'])) {
                 return $this->errorResponse('Invalid API response format');
             }
@@ -101,14 +101,12 @@ class FaceRecognitionService
 
             // Process results
             return $this->processResults($result, $classId, $deviceInfo);
-
         } catch (\Illuminate\Http\Client\RequestException $e) {
             Log::error('HTTP Request Exception', [
                 'error' => $e->getMessage(),
                 'api_url' => $this->apiUrl
             ]);
             return $this->errorResponse('Connection timeout - Flask API may be loading');
-            
         } catch (\Exception $e) {
             Log::error('Face Recognition Service Error', [
                 'error' => $e->getMessage(),
@@ -122,7 +120,7 @@ class FaceRecognitionService
     {
         $status = $response->status();
         $body = $response->body();
-        
+
         // Check if response is HTML (common for server errors)
         if (strpos($body, '<!DOCTYPE') !== false || strpos($body, '<html') !== false) {
             switch ($status) {
@@ -138,7 +136,7 @@ class FaceRecognitionService
                     return "Flask API error (HTTP {$status})";
             }
         }
-        
+
         // Try to parse JSON error
         try {
             $json = json_decode($body, true);
@@ -148,7 +146,7 @@ class FaceRecognitionService
         } catch (\Exception $e) {
             // Ignore JSON parse errors
         }
-        
+
         return "HTTP {$status} - " . substr($body, 0, 100);
     }
 
@@ -175,23 +173,63 @@ class FaceRecognitionService
                 continue;
             }
 
+            // Try exact match first
             $student = Student::where('name', $faceResult['student_name'])
                 ->where('status', 'active')
                 ->first();
 
+            // If exact match fails, try case-insensitive or partial match
+            if (!$student) {
+                // Try case insensitive match for MySQL/SQLite
+                $student = Student::whereRaw('LOWER(name) = ?', [strtolower($faceResult['student_name'])])
+                    ->where('status', 'active')
+                    ->first();
+
+                // If still not found, try finding by partial name (e.g. "Dhiya'uddin" matching "Dhiya'uddin Firmansyah")
+                // Or "Student1" matching "Student 1"
+                if (!$student) {
+                    $searchName = str_replace([' ', "'", '"'], '%', $faceResult['student_name']);
+                    $student = Student::where('name', 'LIKE', "%{$searchName}%")
+                        ->where('status', 'active')
+                        ->first();
+                }
+            }
+
             if (!$student) continue;
 
-            // Skip if already attended today
+            // Check if student is actually enrolled in this class
+            $isEnrolled = \App\Models\ClassEnrollment::where('class_id', $classId)
+                ->where('student_id', $student->id)
+                ->where('status', 'active')
+                ->exists();
+
+            if (!$isEnrolled) {
+                // Record them as recognized but not enrolled for feedback
+                $recognizedStudents[] = [
+                    'student' => $student,
+                    'confidence' => $faceResult['similarity'] ?? 0,
+                    'status' => 'not_enrolled'
+                ];
+                continue;
+            }
+
+            // Skip if already attended today (butt record it as recognized for feedback)
             if (in_array($student->id, $todayAttendance)) {
+                $recognizedStudents[] = [
+                    'student' => $student,
+                    'confidence' => $faceResult['similarity'] ?? 0,
+                    'status' => 'already_attended'
+                ];
                 continue;
             }
 
             // Check duplicate detection cache
             $logKey = $classId . '_' . $student->id;
             $now = time();
-            
+
             if (isset($this->recentDetections[$logKey])) {
                 if ($now - $this->recentDetections[$logKey] < 30) {
+                    // Do not add to array again to avoid spamming the UI within 30 seconds
                     continue;
                 }
             }

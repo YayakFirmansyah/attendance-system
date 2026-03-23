@@ -126,4 +126,24 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Face Recognition API Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for Flask Face Recognition API integration
+    |
+    */
+
+    'python_api_url' => env('PYTHON_API_URL', 'http://localhost:5000'),
+
+    'face_similarity_threshold' => env('FACE_SIMILARITY_THRESHOLD', 0.08),
+
+    'face_recognition' => [
+        'api_timeout' => env('FACE_API_TIMEOUT', 60), // seconds
+        'min_confidence' => env('FACE_MIN_CONFIDENCE', 0.08),
+        'confidence_gap' => env('FACE_CONFIDENCE_GAP', 0.03),
+        'cache_ttl' => env('FACE_CACHE_TTL', 300), // seconds (5 minutes)
+    ],
+
 ];

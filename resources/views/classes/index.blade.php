@@ -37,7 +37,7 @@
                             <div>
                                 <strong>{{ $class->course->course_name }}</strong>
                                 @if($class->class_code)
-                                    <span class="badge bg-success ms-1">{{ $class->class_code }}</span>
+                                <span class="badge bg-success ms-1">{{ $class->class_code }}</span>
                                 @endif
                                 <br>
                                 <small class="text-muted">
@@ -51,10 +51,10 @@
                         </td>
                         <td>
                             <div>
-                                <strong>{{ $class->room->room_code }}</strong><br>
+                                <strong>{{ $class->room->room_id }}</strong><br>
                                 <small class="text-muted">{{ $class->room->room_name }}</small>
                                 @if($class->room->building)
-                                    <br><small class="text-muted">{{ $class->room->building }}</small>
+                                <br><small class="text-muted">{{ $class->room->building }}</small>
                                 @endif
                             </div>
                         </td>
@@ -72,16 +72,20 @@
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <a href="{{ route('attendance.scanner', $class) }}" 
-                                   class="btn btn-outline-primary" title="Scanner">
+                                <a href="{{ route('attendance.scanner', $class) }}"
+                                    class="btn btn-outline-primary" title="Scanner">
                                     <i class="fas fa-camera"></i>
                                 </a>
-                                <a href="{{ route('classes.edit', $class) }}" 
-                                   class="btn btn-outline-warning" title="Edit">
+                                <a href="{{ route('classes.enrollments', $class) }}"
+                                    class="btn btn-outline-info" title="Kelola Peserta">
+                                    <i class="fas fa-users"></i>
+                                </a>
+                                <a href="{{ route('classes.edit', $class) }}"
+                                    class="btn btn-outline-warning" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <button onclick="deleteClass({{ $class->id }}, '{{ $class->course->course_name }} - {{ $class->class_code }}')" 
-                                        class="btn btn-outline-danger" title="Delete">
+                                <button onclick="deleteClass({{ $class->id }}, '{{ $class->course->course_name }} - {{ $class->class_code }}')"
+                                    class="btn btn-outline-danger" title="Delete">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -101,11 +105,11 @@
                 </tbody>
             </table>
         </div>
-        
+
         @if($classes->hasPages())
-            <div class="d-flex justify-content-center mt-4">
-                {{ $classes->links() }}
-            </div>
+        <div class="d-flex justify-content-center mt-4">
+            {{ $classes->links() }}
+        </div>
         @endif
     </div>
 </div>
@@ -138,10 +142,10 @@
 
 @push('scripts')
 <script>
-function deleteClass(id, className) {
-    document.getElementById('deleteClassName').textContent = className;
-    document.getElementById('deleteForm').action = '/classes/' + id;
-    new bootstrap.Modal(document.getElementById('deleteModal')).show();
-}
+    function deleteClass(id, className) {
+        document.getElementById('deleteClassName').textContent = className;
+        document.getElementById('deleteForm').action = '/classes/' + id;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
 </script>
 @endpush

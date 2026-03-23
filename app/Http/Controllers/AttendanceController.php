@@ -62,10 +62,9 @@ class AttendanceController extends Controller
                 'total_recognized' => $result['total_recognized'] ?? 0,
                 'timestamp' => now()->toISOString()
             ]);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::warning('Validation failed', ['errors' => $e->errors()]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed: ' . collect($e->errors())->flatten()->first(),
@@ -74,14 +73,13 @@ class AttendanceController extends Controller
                 'total_recognized' => 0,
                 'errors' => $e->errors()
             ], 422);
-            
         } catch (\Exception $e) {
             Log::error('Attendance processing error', [
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'System error occurred. Please try again.',
@@ -96,32 +94,44 @@ class AttendanceController extends Controller
     {
         try {
             $today = Carbon::today();
-            $attendances = Attendance::with('student')
+
+            // Get all enrolled students
+            $enrollments = \App\Models\ClassEnrollment::with('student')
                 ->where('class_id', $class->id)
-                ->whereDate('date', $today)
-                ->orderBy('check_in', 'desc')
+                ->where('status', 'active')
                 ->get();
+
+            // Get today's attendance records
+            $attendances = Attendance::where('class_id', $class->id)
+                ->whereDate('date', $today)
+                ->get()
+                ->keyBy('student_id');
+
+            $result = $enrollments->map(function ($enrollment) use ($attendances) {
+                $student = $enrollment->student;
+                $attendance = $attendances->get($student->id);
+
+                return [
+                    'id' => $attendance ? $attendance->id : null,
+                    'student_name' => $student->name,
+                    'student_id' => $student->student_id,
+                    'check_in' => $attendance ? $attendance->check_in : null,
+                    'status' => $attendance ? $attendance->status : 'absent',
+                    'similarity_score' => $attendance ? $attendance->similarity_score : 0,
+                    'notes' => $attendance ? $attendance->notes : null
+                ];
+            });
 
             return response()->json([
                 'success' => true,
-                'attendances' => $attendances->map(function ($attendance) {
-                    return [
-                        'id' => $attendance->id,
-                        'student_name' => $attendance->student->name,
-                        'student_id' => $attendance->student->student_id,
-                        'check_in' => $attendance->check_in,
-                        'status' => $attendance->status,
-                        'similarity_score' => $attendance->similarity_score,
-                        'notes' => $attendance->notes
-                    ];
-                }),
-                'total' => $attendances->count(),
+                'attendances' => $result,
+                'total_enrolled' => $enrollments->count(),
+                'total_present' => $attendances->count(),
                 'date' => $today->format('Y-m-d')
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error loading attendance', ['error' => $e->getMessage()]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load attendance data',

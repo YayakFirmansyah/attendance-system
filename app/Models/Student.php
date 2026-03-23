@@ -50,6 +50,23 @@ class Student extends Model
         return $this->hasMany(AttendanceLog::class);
     }
 
+    public function enrollments()
+    {
+        return $this->hasMany(ClassEnrollment::class);
+    }
+
+    public function classes()
+    {
+        return $this->belongsToMany(ClassModel::class, 'class_enrollments', 'student_id', 'class_id')
+            ->withPivot('enrolled_at', 'status', 'notes')
+            ->withTimestamps();
+    }
+
+    public function activeEnrollments()
+    {
+        return $this->hasMany(ClassEnrollment::class)->where('status', 'active');
+    }
+
     // Cached attendance statistics
     public function getAttendanceStatsAttribute()
     {
@@ -57,7 +74,7 @@ class Student extends Model
             $total = $this->attendances()->count();
             $present = $this->attendances()->whereIn('status', ['present', 'late'])->count();
             $late = $this->attendances()->where('status', 'late')->count();
-            
+
             return [
                 'total' => $total,
                 'present' => $present,
@@ -74,37 +91,36 @@ class Student extends Model
             try {
                 $apiUrl = config('app.python_api_url', 'http://localhost:5000');
                 $response = \Http::timeout(2)->get($apiUrl . '/api/model-info');
-                
+
                 if ($response->successful()) {
                     $data = $response->json();
                     $classes = $data['model_info']['classes'] ?? [];
-                    
+
                     // Check dengan student_id (prioritas utama)
                     if (in_array($this->student_id, $classes)) {
                         return true;
                     }
-                    
+
                     // Check dengan nama (fallback)
                     if (in_array($this->name, $classes)) {
                         return true;
                     }
-                    
+
                     // Check case insensitive
                     $studentIdLower = strtolower($this->student_id);
                     $nameLower = strtolower($this->name);
-                    
+
                     foreach ($classes as $class) {
                         $classLower = strtolower($class);
                         if ($classLower === $studentIdLower || $classLower === $nameLower) {
                             return true;
                         }
                     }
-                    
+
                     return false;
                 } else {
                     return 'api_error';
                 }
-                
             } catch (\Illuminate\Http\Client\ConnectionException $e) {
                 return 'api_offline';
             } catch (\Exception $e) {
@@ -117,7 +133,7 @@ class Student extends Model
     public function getFaceRegistrationStatusAttribute()
     {
         $status = $this->is_face_registered;
-        
+
         switch ($status) {
             case true:
                 return ['status' => 'registered', 'message' => 'Face registered'];

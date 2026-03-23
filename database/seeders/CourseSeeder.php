@@ -16,21 +16,21 @@ class CourseSeeder extends Seeder
                 'course_name' => 'Algoritma dan Pemrograman',
                 'credits' => 3,
                 'faculty' => 'Fakultas Teknik',
-                'lecturer_name' => 'Dr. Ir. John Doe, M.Kom'
+                'lecturer_id' => 2
             ],
             [
                 'course_code' => 'TIF002',
                 'course_name' => 'Basis Data',
                 'credits' => 3,
                 'faculty' => 'Fakultas Teknik',
-                'lecturer_name' => 'Prof. Dr. Jane Smith, M.T'
+                'lecturer_id' => 2 // Ganti sesuai ID dosen di tabel lecturers
             ],
             [
                 'course_code' => 'TIF003',
                 'course_name' => 'Kecerdasan Buatan',
                 'credits' => 3,
                 'faculty' => 'Fakultas Teknik',
-                'lecturer_name' => 'Dr. Michael Johnson, M.Kom'
+                'lecturer_id' => 2
             ]
         ];
 
