@@ -17,7 +17,7 @@ class ReportService
      */
     public function generateClassReport(int $classId, Carbon $startDate, Carbon $endDate): array
     {
-        $class = ClassModel::with(['course', 'room', 'enrollments.student'])->findOrFail($classId);
+        $class = ClassModel::with(['course', 'room', 'cohortMembers.student'])->findOrFail($classId);
 
         $attendances = Attendance::with('student')
             ->where('class_id', $classId)
@@ -28,8 +28,8 @@ class ReportService
         $studentAttendances = $attendances->groupBy('student_id');
 
         $reportData = [];
-        foreach ($class->enrollments as $enrollment) {
-            $student = $enrollment->student;
+        foreach ($class->cohortMembers as $membership) {
+            $student = $membership->student;
             $studentRecords = $studentAttendances->get($student->id, collect());
 
             $present = $studentRecords->where('status', AttendanceStatus::PRESENT->value)->count();
@@ -77,7 +77,7 @@ class ReportService
      */
     public function generateStudentReport(int $studentId, ?Carbon $startDate = null, ?Carbon $endDate = null): array
     {
-        $student = Student::with(['enrollments.classModel.course'])->findOrFail($studentId);
+        $student = Student::with(['cohortMemberships.classModel.course'])->findOrFail($studentId);
 
         $query = Attendance::with('classModel.course')
             ->where('student_id', $studentId);
@@ -93,8 +93,8 @@ class ReportService
 
         // Group by class
         $classSummaries = [];
-        foreach ($student->enrollments as $enrollment) {
-            $classId = $enrollment->class_id;
+        foreach ($student->cohortMemberships as $membership) {
+            $classId = $membership->class_id;
             $classAttendances = $attendances->where('class_id', $classId);
 
             $present = $classAttendances->where('status', AttendanceStatus::PRESENT->value)->count();
@@ -107,7 +107,7 @@ class ReportService
             $attendanceRate = $total > 0 ? round(($attended / $total) * 100, 2) : 0;
 
             $classSummaries[] = [
-                'class' => $enrollment->classModel,
+                'class' => $membership->classModel,
                 'statistics' => [
                     'total' => $total,
                     'present' => $present,

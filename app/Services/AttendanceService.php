@@ -163,18 +163,6 @@ class AttendanceService
 
     private function isStudentEnrolledInClass(int $studentId, ClassModel $classModel): bool
     {
-        $hasEnrollment = ClassEnrollment::where('class_id', $classModel->id)
-            ->where('status', 'active')
-            ->exists();
-
-        if ($hasEnrollment) {
-            return ClassEnrollment::where('class_id', $classModel->id)
-                ->where('student_id', $studentId)
-                ->where('status', 'active')
-                ->exists();
-        }
-
-        // Fallback for legacy data where enrollments were never seeded.
         return Student::where('id', $studentId)
             ->where('cohort_id', $classModel->cohort_id)
             ->where('status', 'active')
@@ -183,14 +171,6 @@ class AttendanceService
 
     private function getEnrolledStudentIds(ClassModel $classModel): array
     {
-        $enrollmentQuery = ClassEnrollment::where('class_id', $classModel->id)
-            ->where('status', 'active');
-
-        if ($enrollmentQuery->exists()) {
-            return $enrollmentQuery->pluck('student_id')->toArray();
-        }
-
-        // Fallback for legacy data where enrollments were never seeded.
         return Student::where('cohort_id', $classModel->cohort_id)
             ->where('status', 'active')
             ->pluck('id')

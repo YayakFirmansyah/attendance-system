@@ -56,9 +56,14 @@ class ClassModel extends Model
         return $this->belongsTo(Cohort::class);
     }
 
-    public function enrollments()
+    public function cohortMembers()
     {
         return $this->hasMany(ClassEnrollment::class, 'class_id');
+    }
+
+    public function enrollments()
+    {
+        return $this->cohortMembers();
     }
 
     public function students()
@@ -71,7 +76,12 @@ class ClassModel extends Model
 
     public function activeEnrollments()
     {
-        return $this->hasMany(ClassEnrollment::class, 'class_id')->where('status', 'active');
+        return $this->cohortMembers()->where('status', 'active');
+    }
+
+    public function activeCohortMembers()
+    {
+        return $this->activeEnrollments();
     }
 
     // Scopes

@@ -203,20 +203,9 @@ class FaceRecognitionService
 
             if (!$student) continue;
 
-            // Check if student is actually enrolled in this class.
-            $hasEnrollmentData = ClassEnrollment::where('class_id', $classId)
-                ->where('status', 'active')
-                ->exists();
-
-            if ($hasEnrollmentData) {
-                $isEnrolled = ClassEnrollment::where('class_id', $classId)
-                    ->where('student_id', $student->id)
-                    ->where('status', 'active')
-                    ->exists();
-            } else {
-                $classModel = ClassModel::find($classId);
-                $isEnrolled = $classModel && $student->cohort_id === $classModel->cohort_id;
-            }
+            // Attendance follows the class cohort only.
+            $classModel = ClassModel::find($classId);
+            $isEnrolled = $classModel && $student->cohort_id === $classModel->cohort_id;
 
             if (!$isEnrolled) {
                 // Record them as recognized but not enrolled for feedback

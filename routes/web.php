@@ -38,9 +38,9 @@ Route::middleware(['auth'])->group(function () {
 
         // Class schedule management
         Route::resource('classes', ClassController::class);
-        Route::get('classes/{class}/enrollments', [\App\Http\Controllers\ClassEnrollmentController::class, 'manage'])->name('classes.enrollments');
-        Route::post('classes/{class}/enrollments', [\App\Http\Controllers\ClassEnrollmentController::class, 'store'])->name('classes.enrollments.store');
-        Route::delete('classes/{class}/enrollments/{student}', [\App\Http\Controllers\ClassEnrollmentController::class, 'drop'])->name('classes.enrollments.drop');
+        Route::get('classes/{class}/cohort-members', [\App\Http\Controllers\ClassEnrollmentController::class, 'manage'])->name('classes.cohort-members');
+        Route::post('classes/{class}/cohort-members', [\App\Http\Controllers\ClassEnrollmentController::class, 'store'])->name('classes.cohort-members.store');
+        Route::delete('classes/{class}/cohort-members/{student}', [\App\Http\Controllers\ClassEnrollmentController::class, 'drop'])->name('classes.cohort-members.drop');
 
         // Students management
         Route::resource('students', StudentController::class);

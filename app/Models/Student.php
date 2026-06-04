@@ -61,6 +61,11 @@ class Student extends Model
         return $this->hasMany(ClassEnrollment::class);
     }
 
+    public function cohortMemberships()
+    {
+        return $this->hasMany(ClassEnrollment::class);
+    }
+
     public function classes()
     {
         return $this->belongsToMany(ClassModel::class, 'class_enrollments', 'student_id', 'class_id')
@@ -68,9 +73,19 @@ class Student extends Model
             ->withTimestamps();
     }
 
+    public function cohortClasses()
+    {
+        return $this->classes();
+    }
+
     public function activeEnrollments()
     {
         return $this->hasMany(ClassEnrollment::class)->where('status', 'active');
+    }
+
+    public function activeCohortMemberships()
+    {
+        return $this->activeEnrollments();
     }
 
     // Cached attendance statistics

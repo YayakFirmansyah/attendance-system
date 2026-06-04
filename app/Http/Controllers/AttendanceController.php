@@ -121,10 +121,10 @@ class AttendanceController extends Controller
         try {
             $today = Carbon::today();
 
-            // Get all enrolled students
-            $enrollments = \App\Models\ClassEnrollment::with('student')
-                ->where('class_id', $class->id)
+            // Get all active students from the same cohort as the class.
+            $students = \App\Models\Student::where('cohort_id', $class->cohort_id)
                 ->where('status', 'active')
+                ->orderBy('name')
                 ->get();
 
             // Get today's attendance records
@@ -133,8 +133,7 @@ class AttendanceController extends Controller
                 ->get()
                 ->keyBy('student_id');
 
-            $result = $enrollments->map(function ($enrollment) use ($attendances) {
-                $student = $enrollment->student;
+            $result = $students->map(function ($student) use ($attendances) {
                 $attendance = $attendances->get($student->id);
 
                 return [
@@ -151,7 +150,7 @@ class AttendanceController extends Controller
             return response()->json([
                 'success' => true,
                 'attendances' => $result,
-                'total_enrolled' => $enrollments->count(),
+                'total_enrolled' => $students->count(),
                 'total_present' => $attendances->count(),
                 'date' => $today->format('Y-m-d')
             ]);
